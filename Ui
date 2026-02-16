@@ -27,12 +27,12 @@ local bearlib = {
         }
     },
     Info = {
-        Version = "2.2.0" -- Phiên bản mới với theme DarkBlue
+        Version = "2.2.0"
     },
     Save = {
         UISize = {550, 380},
         TabSize = 160,
-        Theme = "DarkBlue" -- Mặc định theme DarkBlue
+        Theme = "DarkBlue"
     },
     Settings = {},
     Connection = {},
@@ -691,7 +691,7 @@ function bearlib:MakeWindow(Configs)
     Make("Corner", MainFrame, UDim.new(0, 12))
     MakeDrag(MainFrame)
     
-    -- === HIỆU ỨNG HẠT XANH DƯƠNG RƠI (GIỐNG TUYẾT RƠI) ===
+    -- === HIỆU ỨNG HẠT XANH DƯƠNG RƠI ===
     local ParticleFolder = Create("Folder", MainFrame, {Name = "Particles"})
     task.spawn(function()
         for i = 1, 40 do
@@ -712,7 +712,6 @@ function bearlib:MakeWindow(Configs)
                 Name = "Particle_" .. i
             })
             
-            -- Bo tròn để tạo hình giọt nước/tròn
             local ParticleCorner = Instance.new("UICorner")
             ParticleCorner.CornerRadius = UDim.new(0.5, 0)
             ParticleCorner.Parent = Particle
@@ -722,7 +721,6 @@ function bearlib:MakeWindow(Configs)
                     local speed = math.random(5, 10)
                     local targetPos = UDim2.fromScale(Particle.Position.X.Scale, 1.2)
                     
-                    -- Hiệu ứng rơi
                     local tween1 = TweenService:Create(Particle, 
                         TweenInfo.new(speed, Enum.EasingStyle.Linear), 
                         {Position = targetPos}
@@ -731,10 +729,8 @@ function bearlib:MakeWindow(Configs)
                     tween1.Completed:Wait()
                     
                     if Particle and Particle.Parent then
-                        -- Reset lên trên
                         Particle.Position = UDim2.fromScale(math.random(), -0.1)
                         
-                        -- Đổi màu nhẹ khi reset
                         local newBlue = Color3.fromRGB(
                             math.random(100, 200),
                             math.random(150, 255),
@@ -1728,7 +1724,7 @@ function bearlib:MakeWindow(Configs)
                 Create("UIListLayout", {Padding = UDim.new(0, 4)})
             }), "ScrollBar")
             
-            -- Phần xử lý dropdown (giữ nguyên)
+            -- Phần xử lý dropdown
             local ScrollSize, WaitClick = 5
             local function Disable()
                 WaitClick = true
@@ -2249,7 +2245,7 @@ function bearlib:MakeWindow(Configs)
             return TextBox
         end
         
-        -- === DISCORD INVITE (Giữ nguyên) ===
+        -- === DISCORD INVITE ĐÃ SỬA LỖI HIỂN THỊ CHỮ JOIN ===
         function Tab:AddDiscordInvite(Configs)
             local ContainerFrame = Create("Frame", Container, {
                 BackgroundTransparency = 1,
@@ -2414,28 +2410,45 @@ function bearlib:MakeWindow(Configs)
                     })
                 end
                 
-                local JoinButton = InsertTheme(Create("TextButton", ButtonContainer, {
+                -- ĐÃ SỬA: Nút Join với màu chữ trắng rõ ràng
+                local JoinButton = Create("TextButton", ButtonContainer, {
                     Position = UDim2.new(0.5, 0, 1, -10),
                     Size = UDim2.new(1, -20, 0, 20),
                     AnchorPoint = Vector2.new(0.5, 1),
-                    Text = "Join",
+                    Text = "JOIN",
                     Font = Enum.Font.GothamBold,
                     TextSize = 12,
-                    BackgroundColor3 = Theme["Color Theme"],
-                    BackgroundTransparency = 0,
-                    TextColor3 = Color3.fromRGB(255, 255, 255)
-                }), "Text")
+                    BackgroundColor3 = Theme["Color Theme"], -- Màu xanh theme
+                    TextColor3 = Color3.fromRGB(255, 255, 255), -- Màu trắng
+                    TextStrokeColor3 = Color3.fromRGB(0, 0, 0), -- Viền chữ đen
+                    TextStrokeTransparency = 0.5, -- Độ trong suốt viền
+                    ZIndex = 29
+                })
                 Make("Corner", JoinButton, UDim.new(0.5, 0))
+                
+                -- Thêm viền sáng cho nút
+                local JoinButtonStroke = Instance.new("UIStroke")
+                JoinButtonStroke.Thickness = 1
+                JoinButtonStroke.Color = Theme["Color Stroke"]
+                JoinButtonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                JoinButtonStroke.Parent = JoinButton
                 
                 local LastClick = 0
                 JoinButton.Activated:Connect(function()
                     if tick() - LastClick < 5 then return end
                     LastClick = tick()
                     local OriginalText = JoinButton.Text
-                    JoinButton.Text = "Copied!"
+                    local OriginalColor = JoinButton.BackgroundColor3
+                    
+                    -- Hiệu ứng khi click
+                    JoinButton.Text = "COPIED!"
+                    JoinButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Màu xanh lá
+                    
                     setclipboard(InviteLink)
                     task.wait(2)
-                    JoinButton.Text = OriginalText
+                    
+                    JoinButton.Text = "JOIN"
+                    JoinButton.BackgroundColor3 = OriginalColor
                 end)
                 
                 if type(BannerColor) == "string" then
@@ -2579,18 +2592,25 @@ function bearlib:MakeWindow(Configs)
                 ZIndex = 27
             }), "DarkText")
             
+            -- ĐÃ SỬA: Nút Copy Link với màu chữ trắng
             local JoinButton = Create("TextButton", FrameHolder, {
                 Size = UDim2.new(1, -16, 0, 18),
                 AnchorPoint = Vector2.new(0.5, 1),
                 Position = UDim2.new(0.5, 0, 1, -8),
-                Text = "Copy Link",
+                Text = "COPY LINK",
                 Font = Enum.Font.GothamBold,
                 TextSize = 12,
-                TextColor3 = Color3.fromRGB(255, 255, 255),
+                TextColor3 = Color3.fromRGB(255, 255, 255), -- Màu trắng
                 BackgroundColor3 = Theme["Color Theme"],
                 ZIndex = 28
             })
             Make("Corner", JoinButton, UDim.new(0.5, 0))
+            
+            -- Thêm viền cho nút
+            local JoinButtonStroke = Instance.new("UIStroke")
+            JoinButtonStroke.Thickness = 1
+            JoinButtonStroke.Color = Theme["Color Stroke"]
+            JoinButtonStroke.Parent = JoinButton
             
             local ClickDelay
             JoinButton.Activated:Connect(function()
@@ -2598,12 +2618,12 @@ function bearlib:MakeWindow(Configs)
                 if ClickDelay then return end
                 ClickDelay = true
                 SetProps(JoinButton, {
-                    Text = "Copied!",
-                    BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+                    Text = "COPIED!",
+                    BackgroundColor3 = Color3.fromRGB(0, 255, 0)
                 })
                 task.wait(3)
                 SetProps(JoinButton, {
-                    Text = "Copy Link",
+                    Text = "COPY LINK",
                     BackgroundColor3 = Theme["Color Theme"]
                 })
                 ClickDelay = false
