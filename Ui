@@ -2415,15 +2415,26 @@ function bearlib:MakeWindow(Configs)
                 end
                 
                 local JoinButton = InsertTheme(Create("TextButton", ButtonContainer, {
-                    Position = UDim2.new(0.5, 0, 1, -10),
-                    Size = UDim2.new(1, -20, 0, 20),
-                    AnchorPoint = Vector2.new(0.5, 1),
-                    Text = "Join",
-                    Font = Enum.Font.GothamBold,
-                    TextSize = 12,
-                    BackgroundColor3 = Theme["Color Theme"],
-                    TextColor3 = Color3.fromRGB(255, 255, 255)
-                }), "Text")
+    Position = UDim2.new(0.5, 0, 1, -10),
+    Size = UDim2.new(1, -20, 0, 20),
+    AnchorPoint = Vector2.new(0.5, 1),
+    Text = "Join",
+    Font = Enum.Font.GothamBold,
+    TextSize = 12,
+    TextTransparency = 0,  -- Đảm bảo text không trong suốt
+    BackgroundTransparency = 0,  -- Đảm bảo background hiện
+    BackgroundColor3 = Theme["Color Theme"],
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    Visible = true,
+    ZIndex = 50  -- Tăng ZIndex để nổi lên trên
+}), "Text")
+
+-- Thêm UIStroke để nổi bật hơn
+local JoinButtonStroke = Instance.new("UIStroke")
+JoinButtonStroke.Thickness = 1
+JoinButtonStroke.Color = Color3.fromRGB(255, 255, 255)
+JoinButtonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+JoinButtonStroke.Parent = JoinButton
                 Make("Corner", JoinButton, UDim.new(0.5, 0))
                 
                 local LastClick = 0
