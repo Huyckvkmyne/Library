@@ -2796,4 +2796,329 @@ function bearlib:MakeWindow(Configs)
     return Window
 end
 
+-- ==================== HỆ THỐNG TOAST NOTIFICATION CHO BEARLIB ====================
+
+-- Tạo container cho toast nếu chưa có
+local ToastContainer = ScreenGui:FindFirstChild("ToastContainer")
+if not ToastContainer then
+    ToastContainer = Instance.new("Frame")
+    ToastContainer.Name = "ToastContainer"
+    ToastContainer.Size = UDim2.new(0, 300, 1, -20)
+    ToastContainer.Position = UDim2.new(1, -310, 0, 10)
+    ToastContainer.BackgroundTransparency = 1
+    ToastContainer.Parent = ScreenGui
+    ToastContainer.ZIndex = 100
+    
+    local ToastListLayout = Instance.new("UIListLayout")
+    ToastListLayout.SortOrder = "LayoutOrder"
+    ToastListLayout.HorizontalAlignment = "Right"
+    ToastListLayout.VerticalAlignment = "Bottom"
+    ToastListLayout.Padding = UDim.new(0, 8)
+    ToastListLayout.Parent = ToastContainer
+end
+
+-- Hàm tạo corner
+local function AddToastCorner(instance, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius or 12)
+    corner.Parent = instance
+end
+
+-- Hàm format thời gian
+local function FormatToastTime(seconds)
+    local mins = math.floor(seconds / 60)
+    local secs = seconds % 60
+    return string.format("%02d:%02d", mins, secs)
+end
+
+-- Hàm tạo toast notification
+function bearlib:ShowToast(notificationText, duration)
+    -- Kiểm tra tham số
+    if not notificationText then
+        notificationText = "Thông báo mặc định"
+    end
+    
+    -- Duration mặc định 60 giây nếu không nhập
+    local toastDuration = duration or 60
+    
+    -- Tạo frame chính
+    local ToastFrame = Instance.new("Frame")
+    ToastFrame.Size = UDim2.new(0, 260, 0, 0)
+    ToastFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Đen tuyền
+    ToastFrame.ClipsDescendants = true
+    ToastFrame.LayoutOrder = -tick()
+    ToastFrame.Parent = ToastContainer
+    ToastFrame.ZIndex = 101
+    AddToastCorner(ToastFrame, 14)
+    
+    -- Viền xanh dương neon
+    local ToastStroke = Instance.new("UIStroke")
+    ToastStroke.Color = Theme["Color Stroke"]
+    ToastStroke.Thickness = 2
+    ToastStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    ToastStroke.Parent = ToastFrame
+    
+    -- Gradient nhẹ
+    local ToastGradient = Instance.new("UIGradient")
+    ToastGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(0, 40, 80)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(0, 10, 40))
+    })
+    ToastGradient.Rotation = 45
+    ToastGradient.Parent = ToastFrame
+    
+    -- ===== HIỆU ỨNG TUYẾT RƠI =====
+    local ToastSnowFolder = Instance.new("Folder")
+    ToastSnowFolder.Name = "SnowParticles"
+    ToastSnowFolder.Parent = ToastFrame
+    
+    -- Tạo 30 hạt tuyết
+    for i = 1, 30 do
+        local Snow = Instance.new("Frame")
+        Snow.Name = "Snow_" .. i
+        local size = math.random(2, 4)
+        Snow.Size = UDim2.new(0, size, 0, size)
+        Snow.Position = UDim2.new(math.random(), math.random(-15, 15), math.random(), math.random(-15, 15))
+        Snow.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        Snow.BackgroundTransparency = math.random(3, 7) / 10
+        Snow.ZIndex = 5
+        Snow.Parent = ToastSnowFolder
+        
+        local SnowCorner = Instance.new("UICorner")
+        SnowCorner.CornerRadius = UDim.new(1, 0)
+        SnowCorner.Parent = Snow
+        
+        -- Animation tuyết rơi
+        coroutine.wrap(function()
+            while Snow and Snow.Parent do
+                local speed = math.random(4, 7)
+                local startPos = Snow.Position
+                local endPos = UDim2.new(
+                    startPos.X.Scale + (math.random(-8, 8) / 100),
+                    startPos.X.Offset,
+                    1.2,
+                    startPos.Y.Offset
+                )
+                
+                local tween = TweenService:Create(
+                    Snow,
+                    TweenInfo.new(speed, Enum.EasingStyle.Linear),
+                    {Position = endPos}
+                )
+                tween:Play()
+                tween.Completed:Wait()
+                
+                if Snow and Snow.Parent then
+                    Snow.Position = UDim2.new(math.random(), math.random(-15, 15), -0.1, math.random(-10, 10))
+                end
+            end
+        end)()
+    end
+    
+    -- ===== VÒNG TRÒN Ở GÓC PHẢI TRÊN =====
+    local ToastCircleContainer = Instance.new("Frame")
+    ToastCircleContainer.Size = UDim2.new(0, 40, 0, 40)
+    ToastCircleContainer.Position = UDim2.new(1, -15, 0, 10)
+    ToastCircleContainer.AnchorPoint = Vector2.new(1, 0)
+    ToastCircleContainer.BackgroundTransparency = 1
+    ToastCircleContainer.ZIndex = 15
+    ToastCircleContainer.Parent = ToastFrame
+    
+    -- Vòng tròn nền
+    local ToastCircleBg = Instance.new("Frame")
+    ToastCircleBg.Size = UDim2.new(1, 0, 1, 0)
+    ToastCircleBg.BackgroundColor3 = Color3.fromRGB(5, 5, 15)
+    ToastCircleBg.Parent = ToastCircleContainer
+    AddToastCorner(ToastCircleBg, 20)
+    
+    -- Viền xanh
+    local ToastCircleStroke = Instance.new("UIStroke")
+    ToastCircleStroke.Color = Theme["Color Stroke"]
+    ToastCircleStroke.Thickness = 1.5
+    ToastCircleStroke.Parent = ToastCircleBg
+    
+    -- Vòng tròn xoay
+    local ToastRotatingArc = Instance.new("Frame")
+    ToastRotatingArc.Size = UDim2.new(1, 0, 1, 0)
+    ToastRotatingArc.BackgroundTransparency = 1
+    ToastRotatingArc.Parent = ToastCircleContainer
+    
+    -- Tạo 6 chấm xoay
+    for i = 1, 6 do
+        local dot = Instance.new("Frame")
+        dot.Size = UDim2.new(0, 3, 0, 3)
+        local angle = (i / 6) * math.pi * 2
+        dot.Position = UDim2.new(
+            0.5 + math.sin(angle) * 0.3,
+            0,
+            0.5 + math.cos(angle) * 0.3,
+            0
+        )
+        dot.AnchorPoint = Vector2.new(0.5, 0.5)
+        dot.BackgroundColor3 = Theme["Color Theme"]
+        dot.BackgroundTransparency = 0.4
+        dot.Parent = ToastRotatingArc
+        
+        local dotCorner = Instance.new("UICorner")
+        dotCorner.CornerRadius = UDim.new(1, 0)
+        dotCorner.Parent = dot
+    end
+    
+    -- Số đếm
+    local ToastTimerLabel = Instance.new("TextLabel")
+    ToastTimerLabel.Size = UDim2.new(1, 0, 1, 0)
+    ToastTimerLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+    ToastTimerLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+    ToastTimerLabel.Text = tostring(toastDuration)
+    ToastTimerLabel.Font = Enum.Font.FredokaOne
+    ToastTimerLabel.TextColor3 = Theme["Color Text"]
+    ToastTimerLabel.TextSize = 16
+    ToastTimerLabel.BackgroundTransparency = 1
+    ToastTimerLabel.Parent = ToastCircleContainer
+    
+    -- ===== ICON GÓC TRÁI TRÊN =====
+    local ToastIcon = Instance.new("ImageLabel")
+    ToastIcon.Size = UDim2.new(0, 20, 0, 20)
+    ToastIcon.Position = UDim2.new(0, 12, 0, 12)
+    ToastIcon.Image = "rbxassetid://113942234405258"
+    ToastIcon.ImageColor3 = Theme["Color Theme"]
+    ToastIcon.BackgroundTransparency = 1
+    ToastIcon.Parent = ToastFrame
+    
+    -- Title "BEAR HUB"
+    local ToastTitle = Instance.new("TextLabel")
+    ToastTitle.Size = UDim2.new(1, -60, 0, 16)
+    ToastTitle.Position = UDim2.new(0, 38, 0, 12)
+    ToastTitle.Text = "BEAR HUB"
+    ToastTitle.Font = Enum.Font.GothamBold
+    ToastTitle.TextColor3 = Theme["Color Theme"]
+    ToastTitle.TextSize = 13
+    ToastTitle.TextXAlignment = "Left"
+    ToastTitle.BackgroundTransparency = 1
+    ToastTitle.Parent = ToastFrame
+    
+    -- Khu vực hiển thị thông báo
+    local ToastNotificationLabel = Instance.new("TextLabel")
+    ToastNotificationLabel.Size = UDim2.new(1, -24, 0, 36)
+    ToastNotificationLabel.Position = UDim2.new(0, 12, 0, 35)
+    ToastNotificationLabel.Text = notificationText
+    ToastNotificationLabel.Font = Enum.Font.Gotham
+    ToastNotificationLabel.TextColor3 = Theme["Color Dark Text"]
+    ToastNotificationLabel.TextSize = 12
+    ToastNotificationLabel.TextWrapped = true
+    ToastNotificationLabel.BackgroundTransparency = 1
+    ToastNotificationLabel.Parent = ToastFrame
+    
+    -- Progress bar
+    local ToastProgressBg = Instance.new("Frame")
+    ToastProgressBg.Size = UDim2.new(1, -24, 0, 3)
+    ToastProgressBg.Position = UDim2.new(0, 12, 0, 75)
+    ToastProgressBg.BackgroundColor3 = Theme["Color Stroke"]
+    ToastProgressBg.BackgroundTransparency = 0.8
+    ToastProgressBg.Parent = ToastFrame
+    AddToastCorner(ToastProgressBg, 1.5)
+    
+    local ToastProgressBar = Instance.new("Frame")
+    ToastProgressBar.Size = UDim2.new(1, 0, 1, 0)
+    ToastProgressBar.BackgroundColor3 = Theme["Color Theme"]
+    ToastProgressBar.Parent = ToastProgressBg
+    AddToastCorner(ToastProgressBar, 1.5)
+    
+    -- Fix size
+    ToastFrame.Size = UDim2.new(0, 260, 0, 90)
+    
+    -- Timer logic
+    local remainingTime = toastDuration
+    local active = true
+    local connection
+    local rotationSpeed = 0
+    
+    local function UpdateDisplay()
+        ToastTimerLabel.Text = string.format("%d", math.floor(remainingTime))
+        local progress = remainingTime / toastDuration
+        
+        -- Cập nhật thanh progress
+        ToastProgressBar.Size = UDim2.new(progress, 0, 1, 0)
+        
+        -- Xoay vòng tròn
+        rotationSpeed = rotationSpeed + 3
+        ToastRotatingArc.Rotation = rotationSpeed
+        
+        -- Hiệu ứng khi còn 10 giây
+        if remainingTime <= 10 then
+            ToastTimerLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            ToastTimerLabel.TextSize = 18 + math.sin(tick() * 12) * 2
+        end
+    end
+    
+    -- Animation mở
+    ToastFrame.Size = UDim2.new(0, 260, 0, 0)
+    local openTween = TweenService:Create(
+        ToastFrame,
+        TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {Size = UDim2.new(0, 260, 0, 90)}
+    )
+    openTween:Play()
+    
+    -- Đếm ngược
+    connection = RunService.Heartbeat:Connect(function(dt)
+        if not active then return end
+        if remainingTime > 0 then
+            remainingTime = remainingTime - dt
+            if remainingTime < 0 then remainingTime = 0 end
+            UpdateDisplay()
+        else
+            connection:Disconnect()
+            
+            -- Tắt tuyết
+            for _, snow in pairs(ToastSnowFolder:GetChildren()) do
+                snow:Destroy()
+            end
+            
+            -- Chuyển màu frame
+            TweenService:Create(
+                ToastFrame,
+                TweenInfo.new(1),
+                {BackgroundColor3 = Color3.fromRGB(0, 40, 120)}
+            ):Play()
+            
+            -- Vòng tròn phát sáng
+            TweenService:Create(
+                ToastCircleBg,
+                TweenInfo.new(0.5),
+                {BackgroundColor3 = Color3.fromRGB(0, 80, 180)}
+            ):Play()
+            
+            ToastTimerLabel.Text = "00"
+            ToastTimerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            
+            ToastNotificationLabel.Text = "✓ ĐÃ ĐÓNG"
+            ToastNotificationLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
+            
+            -- Icon chuyển màu
+            TweenService:Create(
+                ToastIcon,
+                TweenInfo.new(0.5),
+                {ImageColor3 = Color3.fromRGB(255, 255, 255)}
+            ):Play()
+            
+            -- Đóng sau 2 giây
+            task.wait(2)
+            
+            local closeTween = TweenService:Create(
+                ToastFrame,
+                TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+                {Size = UDim2.new(0, 260, 0, 0)}
+            )
+            closeTween:Play()
+            closeTween.Completed:Connect(function()
+                ToastFrame:Destroy()
+            end)
+        end
+    end)
+    
+    return ToastFrame
+end
+
+print("[BEARLIB] Hệ thống Toast Notification đã được thêm vào!")
 return bearlib
