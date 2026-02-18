@@ -1,0 +1,1153 @@
+local MarketplaceService = game:GetService("MarketplaceService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local PlayerMouse = Player:GetMouse()
+
+local bearlib = {
+    Themes = {
+        DarkBlue = {
+            ["Color Hub 1"] = ColorSequence.new({
+                ColorSequenceKeypoint.new(0.00, Color3.fromRGB(0, 50, 100)),
+                ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 20, 60)),
+                ColorSequenceKeypoint.new(1.00, Color3.fromRGB(0, 0, 30))
+            }),
+            ["Color Hub 2"] = Color3.fromRGB(5, 5, 15),
+            ["Color Stroke"] = Color3.fromRGB(0, 150, 255),
+            ["Color Theme"] = Color3.fromRGB(0, 200, 255),
+            ["Color Text"] = Color3.fromRGB(220, 240, 255),
+            ["Color Dark Text"] = Color3.fromRGB(150, 180, 200),
+            ["Color Discord Text"] = Color3.fromRGB(220, 240, 255),
+            ["Color Discord Stats"] = Color3.fromRGB(180, 220, 255)
+        }
+    },
+    Info = {
+        Version = "2.2.0"
+    },
+    Save = {
+        UISize = {550, 380},
+        TabSize = 160,
+        Theme = "DarkBlue"
+    },
+    Settings = {},
+    Connection = {},
+    Instances = {},
+    Elements = {},
+    Options = {},
+    Flags = {},
+    Tabs = {},
+    Icons = {},
+    AllElements = {},
+    SaveEnabled = true,
+    SaveFile = "BearHub_Settings.json"
+}
+
+local ViewportSize = workspace.CurrentCamera.ViewportSize
+local UIScale = ViewportSize.Y / 450
+local Settings = bearlib.Settings
+local Flags = bearlib.Flags
+
+-- Hệ thống lưu
+function bearlib:EnableSaving(enable)
+    self.SaveEnabled = enable
+    return self
+end
+
+function bearlib:SetSaveFile(filename)
+    if type(filename) == "string" and #filename > 0 then
+        self.SaveFile = filename
+    end
+    return self
+end
+
+local function SaveJson(FileName, save)
+    if not bearlib.SaveEnabled or not writefile then return false end
+    local success, json = pcall(function() return HttpService:JSONEncode(save) end)
+    if success then
+        pcall(function() writefile(FileName, json) end)
+        return true
+    end
+    return false
+end
+
+local function LoadJson(FileName)
+    if not readfile or not isfile then return nil end
+    local success, exists = pcall(isfile, FileName)
+    if not success or not exists then return nil end
+    local success, content = pcall(readfile, FileName)
+    if not success then return nil end
+    local success, decoded = pcall(function() return HttpService:JSONDecode(content) end)
+    return success and decoded or nil
+end
+
+-- Hàm tạo instance
+local function Create(...)
+    local args = {...}
+    if type(args) ~= "table" then return end
+    local new = Instance.new(args[1])
+    if type(args[2]) == "table" then
+        for prop, value in pairs(args[2]) do
+            new[prop] = value
+        end
+    end
+    if type(args[3]) == "table" then
+        for _, child in pairs(args[3]) do
+            child.Parent = new
+        end
+    end
+    return new
+end
+
+-- ScreenGui chính
+local ScreenGui = Create("ScreenGui", CoreGui, {
+    Name = "BearHub_DarkBlue",
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+}, {
+    Create("UIScale", {Scale = UIScale, Name = "Scale"})
+})
+
+local ScreenFind = CoreGui:FindFirstChild(ScreenGui.Name)
+if ScreenFind and ScreenFind ~= ScreenGui then
+    ScreenFind:Destroy()
+end
+
+local Theme = bearlib.Themes[bearlib.Save.Theme]
+
+-- Hàm kéo
+local function MakeDrag(Instance)
+    task.spawn(function()
+        Instance.Active = true
+        Instance.AutoButtonColor = false
+        
+        local DragStart, StartPos, InputOn
+        
+        local function Update(input)
+            local delta = input.Position - DragStart
+            Instance.Position = UDim2.new(
+                StartPos.X.Scale, StartPos.X.Offset + delta.X / UIScale,
+                StartPos.Y.Scale, StartPos.Y.Offset + delta.Y / UIScale
+            )
+        end
+        
+        Instance.InputBegan:Connect(function(Input)
+            if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+                StartPos = Instance.Position
+                DragStart = Input.Position
+                InputOn = true
+                
+                while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
+                    RunService.Heartbeat:Wait()
+                    if InputOn then Update(Input) end
+                end
+                InputOn = false
+            end
+        end)
+    end)
+    return Instance
+end
+
+-- Hàm tạo góc bo tròn
+local function AddCorner(instance, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius or 7)
+    corner.Parent = instance
+end
+
+-- Hàm tạo viền
+local function AddStroke(instance, color, thickness)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color or Theme["Color Stroke"]
+    stroke.Thickness = thickness or 1
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = instance
+end
+
+-- ==================== CỬA SỔ CHÍNH ====================
+function bearlib:MakeWindow(Configs)
+    local WTitle = Configs[1] or Configs.Name or Configs.Title or "Bear Hub"
+    local WMiniText = Configs[2] or Configs.SubTitle or "by Quang Huy"
+    local SaveFolder = Configs[3] or Configs.SaveFolder or false
+    
+    if type(SaveFolder) == "string" then
+        Settings.ScriptFile = SaveFolder
+        self:SetSaveFile(SaveFolder)
+        self:EnableSaving(true)
+    elseif SaveFolder == false then
+        self:EnableSaving(false)
+        Settings.ScriptFile = nil
+    end
+    
+    -- Load flags từ file
+    if self.SaveEnabled then
+        local decoded = LoadJson(self.SaveFile)
+        if type(decoded) == "table" then
+            Flags = decoded
+        end
+    end
+    
+    local UISizeX, UISizeY = unpack(bearlib.Save.UISize)
+    
+    -- Main Frame
+    local MainFrame = Create("ImageButton", ScreenGui, {
+        Size = UDim2.fromOffset(UISizeX, UISizeY),
+        Position = UDim2.new(0.5, -UISizeX/2, 0.5, -UISizeY/2),
+        BackgroundColor3 = Theme["Color Hub 2"],
+        BackgroundTransparency = 0.03,
+        ClipsDescendants = true,
+        Name = "Hub",
+        ZIndex = 1
+    })
+    AddCorner(MainFrame, 12)
+    AddStroke(MainFrame, Theme["Color Stroke"], 1.5)
+    MakeDrag(MainFrame)
+    
+    -- Hiệu ứng hạt rơi
+    local ParticleFolder = Create("Folder", MainFrame, {Name = "Particles"})
+    task.spawn(function()
+        for i = 1, 30 do
+            local ParticleSize = math.random(2, 5)
+            local Particle = Create("Frame", MainFrame, {
+                BackgroundColor3 = Theme["Color Theme"],
+                BackgroundTransparency = math.random(5, 8) / 10,
+                Size = UDim2.fromOffset(ParticleSize, ParticleSize),
+                Position = UDim2.fromScale(math.random(), math.random()),
+                Rotation = math.random(0, 360),
+                Name = "Particle_" .. i,
+                ZIndex = 0
+            })
+            AddCorner(Particle, ParticleSize/2)
+            
+            task.spawn(function()
+                while Particle and Particle.Parent do
+                    local speed = math.random(5, 8)
+                    local targetPos = UDim2.fromScale(Particle.Position.X.Scale, 1.2)
+                    local tween = TweenService:Create(Particle, TweenInfo.new(speed, Enum.EasingStyle.Linear), {Position = targetPos})
+                    tween:Play()
+                    tween.Completed:Wait()
+                    if Particle and Particle.Parent then
+                        Particle.Position = UDim2.fromScale(math.random(), -0.1)
+                    end
+                end
+            end)
+        end
+    end)
+    
+    -- TopBar
+    local TopBar = Create("Frame", MainFrame, {
+        Size = UDim2.new(1, 0, 0, 35),
+        BackgroundColor3 = Theme["Color Hub 2"],
+        BackgroundTransparency = 0.2,
+        Name = "TopBar",
+        ZIndex = 20
+    })
+    AddCorner(TopBar, 12)
+    
+    -- Title
+    local Title = Create("TextLabel", TopBar, {
+        Position = UDim2.new(0, 15, 0.5),
+        AnchorPoint = Vector2.new(0, 0.5),
+        Size = UDim2.new(0.5, 0, 0.8, 0),
+        Text = WTitle,
+        TextXAlignment = "Left",
+        TextSize = 16,
+        TextColor3 = Theme["Color Text"],
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Name = "Title",
+        ZIndex = 21
+    })
+    
+    local SubTitle = Create("TextLabel", Title, {
+        Position = UDim2.new(1, 5, 1, -2),
+        AnchorPoint = Vector2.new(0, 1),
+        Size = UDim2.new(0, 200, 0, 14),
+        Text = WMiniText,
+        TextColor3 = Theme["Color Dark Text"],
+        BackgroundTransparency = 1,
+        TextXAlignment = "Left",
+        TextSize = 10,
+        Font = Enum.Font.Gotham,
+        Name = "SubTitle",
+        ZIndex = 21
+    })
+    
+    -- Tab Scroll
+    local TabScroll = Create("ScrollingFrame", MainFrame, {
+        Size = UDim2.new(0, bearlib.Save.TabSize, 1, -35),
+        Position = UDim2.new(0, 0, 1, 0),
+        AnchorPoint = Vector2.new(0, 1),
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = Theme["Color Theme"],
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutomaticCanvasSize = "Y",
+        ScrollingDirection = "Y",
+        Name = "TabScroll",
+        ZIndex = 20
+    }, {
+        Create("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10)}),
+        Create("UIListLayout", {Padding = UDim.new(0, 6)})
+    })
+    
+    -- Container chính
+    local Containers = Create("Frame", MainFrame, {
+        Size = UDim2.new(1, -bearlib.Save.TabSize, 1, -35),
+        Position = UDim2.new(1, 0, 1, 0),
+        AnchorPoint = Vector2.new(1, 1),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+        Name = "Containers",
+        ZIndex = 20
+    })
+    
+    -- Buttons trên TopBar
+    local ButtonsFolder = Create("Frame", TopBar, {
+        Size = UDim2.new(0, 70, 1, 0),
+        Position = UDim2.new(1, -15, 0),
+        AnchorPoint = Vector2.new(1, 0),
+        BackgroundTransparency = 1,
+        ZIndex = 25
+    }, {
+        Create("UIListLayout", {FillDirection = "Horizontal", HorizontalAlignment = "Right", VerticalAlignment = "Center", Padding = UDim.new(0, 8)})
+    })
+    
+    local MinimizeButton = Create("ImageButton", ButtonsFolder, {
+        Size = UDim2.new(0, 18, 0, 18),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://10734896206",
+        ImageColor3 = Theme["Color Text"],
+        Name = "Minimize",
+        ZIndex = 25
+    })
+    
+    local CloseButton = Create("ImageButton", ButtonsFolder, {
+        Size = UDim2.new(0, 18, 0, 18),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://10747384394",
+        ImageColor3 = Theme["Color Text"],
+        Name = "Close",
+        ZIndex = 25
+    })
+    
+    -- Control Size
+    local ControlSize = MakeDrag(Create("ImageButton", MainFrame, {
+        Size = UDim2.new(0, 30, 0, 30),
+        Position = MainFrame.Size,
+        AnchorPoint = Vector2.new(0.8, 0.8),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://10747384394",
+        ImageColor3 = Theme["Color Stroke"],
+        Name = "ControlSize",
+        ZIndex = 30
+    }))
+    
+    ControlSize:GetPropertyChangedSignal("Position"):Connect(function()
+        MainFrame.Size = ControlSize.Position
+        bearlib.Save.UISize = {MainFrame.Size.X.Offset, MainFrame.Size.Y.Offset}
+        if bearlib.SaveEnabled then SaveJson(bearlib.SaveFile, bearlib.Save) end
+    end)
+    
+    -- Window object
+    local Window, FirstTab = {}, true
+    local Minimized, SaveSize
+    
+    function Window:CloseBtn()
+        ScreenGui:Destroy()
+        local Toggle = CoreGui:FindFirstChild("BearHub_Toggle")
+        if Toggle then Toggle:Destroy() end
+    end
+    
+    function Window:MinimizeBtn()
+        if Minimized then
+            MinimizeButton.Image = "rbxassetid://10734896206"
+            MainFrame.Size = SaveSize
+            ControlSize.Visible = true
+            Minimized = false
+        else
+            MinimizeButton.Image = "rbxassetid://10734924532"
+            SaveSize = MainFrame.Size
+            ControlSize.Visible = false
+            MainFrame.Size = UDim2.fromOffset(MainFrame.Size.X.Offset, 35)
+            Minimized = true
+        end
+    end
+    
+    CloseButton.Activated:Connect(Window.CloseBtn)
+    MinimizeButton.Activated:Connect(Window.MinimizeBtn)
+    
+    -- Hệ thống Tab
+    local ContainerList = {}
+    
+    function Window:MakeTab(Configs)
+        local TName = Configs[1] or Configs.Title or "Tab"
+        local TIcon = Configs[2] or Configs.Icon or ""
+        
+        -- Tab Button
+        local TabSelect = Create("TextButton", TabScroll, {
+            Size = UDim2.new(1, 0, 0, 28),
+            BackgroundColor3 = Theme["Color Hub 2"],
+            AutoButtonColor = false,
+            Text = "",
+            ZIndex = 25
+        })
+        AddCorner(TabSelect, 8)
+        
+        local SelectedIndicator = Create("Frame", TabSelect, {
+            Size = FirstTab and UDim2.new(0, 4, 0, 20) or UDim2.new(0, 4, 0, 4),
+            Position = UDim2.new(0, 2, 0.5),
+            AnchorPoint = Vector2.new(0, 0.5),
+            BackgroundColor3 = Theme["Color Theme"],
+            BackgroundTransparency = FirstTab and 0 or 1,
+            ZIndex = 26
+        })
+        AddCorner(SelectedIndicator, 2)
+        
+        local TabTitle = Create("TextLabel", TabSelect, {
+            Position = UDim2.new(0, 12, 0.5),
+            AnchorPoint = Vector2.new(0, 0.5),
+            Size = UDim2.new(1, -20, 0.8, 0),
+            Text = TName,
+            TextColor3 = Theme["Color Text"],
+            TextTransparency = FirstTab and 0 or 0.3,
+            BackgroundTransparency = 1,
+            TextXAlignment = "Left",
+            TextSize = 12,
+            Font = Enum.Font.GothamBold,
+            ZIndex = 26
+        })
+        
+        -- Container cho tab
+        local Container = Create("ScrollingFrame", {
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            ScrollBarThickness = 2,
+            ScrollBarImageColor3 = Theme["Color Theme"],
+            AutomaticCanvasSize = "Y",
+            ScrollingDirection = "Y",
+            BorderSizePixel = 0,
+            Name = TName .. "Container",
+            ZIndex = 20
+        }, {
+            Create("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10)}),
+            Create("UIListLayout", {Padding = UDim.new(0, 8)})
+        })
+        
+        table.insert(ContainerList, Container)
+        if not FirstTab then Container.Parent = nil end
+        
+        local function SelectTab()
+            for _, c in pairs(ContainerList) do
+                if c ~= Container then c.Parent = nil end
+            end
+            Container.Parent = Containers
+            
+            for _, tab in pairs(bearlib.Tabs) do
+                if tab.Cont ~= Container then
+                    tab.func:Disable()
+                end
+            end
+            CreateTween({TabTitle, "TextTransparency", 0, 0.2})
+            CreateTween({SelectedIndicator, "Size", UDim2.new(0, 4, 0, 20), 0.2})
+            CreateTween({SelectedIndicator, "BackgroundTransparency", 0, 0.2})
+        end
+        TabSelect.Activated:Connect(SelectTab)
+        
+        FirstTab = false
+        local Tab = {}
+        table.insert(bearlib.Tabs, {func = Tab, Cont = Container})
+        Tab.Cont = Container
+        
+        function Tab:Disable()
+            Container.Parent = nil
+            CreateTween({TabTitle, "TextTransparency", 0.3, 0.2})
+            CreateTween({SelectedIndicator, "Size", UDim2.new(0, 4, 0, 4), 0.2})
+            CreateTween({SelectedIndicator, "BackgroundTransparency", 1, 0.2})
+        end
+        
+        function Tab:Enable()
+            SelectTab()
+        end
+        
+        -- Section
+        local CurrentSectionName = nil
+        
+        function Tab:AddSection(Configs)
+            local SectionName = type(Configs) == "string" and Configs or Configs[1] or Configs.Name or Configs.Title
+            CurrentSectionName = SectionName
+            
+            local SectionFrame = Create("Frame", Container, {
+                Size = UDim2.new(1, 0, 0, 24),
+                BackgroundTransparency = 1,
+                ZIndex = 25
+            })
+            
+            local SectionLabel = Create("TextLabel", SectionFrame, {
+                Position = UDim2.new(0, 8, 0.5),
+                AnchorPoint = Vector2.new(0, 0.5),
+                Size = UDim2.new(1, -20, 0.8, 0),
+                Text = SectionName,
+                TextColor3 = Theme["Color Text"],
+                TextSize = 15,
+                TextXAlignment = "Left",
+                Font = Enum.Font.GothamBold,
+                BackgroundTransparency = 1,
+                ZIndex = 26
+            })
+            
+            local Underline = Create("Frame", SectionFrame, {
+                Size = UDim2.new(1, -20, 0, 2),
+                Position = UDim2.new(0, 10, 1, -2),
+                BackgroundColor3 = Theme["Color Stroke"],
+                BackgroundTransparency = 0.5,
+                ZIndex = 26
+            })
+            AddCorner(Underline, 1)
+            
+            local Section = {}
+            function Section:Set(New) SectionLabel.Text = New end
+            function Section:Destroy() SectionFrame:Destroy() end
+            return Section
+        end
+        
+        -- Button
+        function Tab:AddButton(Configs)
+            local BName = Configs[1] or Configs.Name or Configs.Title or "Button"
+            local BDesc = Configs.Desc or Configs.Description or ""
+            local Callback = Configs.Callback or function() end
+            
+            local Button = Create("TextButton", Container, {
+                Size = UDim2.new(1, 0, 0, 30),
+                BackgroundColor3 = Theme["Color Hub 2"],
+                AutoButtonColor = false,
+                Text = "",
+                ZIndex = 25
+            })
+            AddCorner(Button, 6)
+            AddStroke(Button, Theme["Color Stroke"], 1)
+            
+            local Title = Create("TextLabel", Button, {
+                Position = UDim2.new(0, 10, 0.5),
+                AnchorPoint = Vector2.new(0, 0.5),
+                Size = UDim2.new(0.7, 0, 0.8, 0),
+                Text = BName,
+                TextColor3 = Theme["Color Text"],
+                TextXAlignment = "Left",
+                TextSize = 12,
+                Font = Enum.Font.GothamBold,
+                BackgroundTransparency = 1,
+                ZIndex = 26
+            })
+            
+            if BDesc ~= "" then
+                Create("TextLabel", Button, {
+                    Position = UDim2.new(0, 10, 1, -5),
+                    AnchorPoint = Vector2.new(0, 1),
+                    Size = UDim2.new(0.9, 0, 0, 10),
+                    Text = BDesc,
+                    TextColor3 = Theme["Color Dark Text"],
+                    TextXAlignment = "Left",
+                    TextSize = 8,
+                    Font = Enum.Font.Gotham,
+                    BackgroundTransparency = 1,
+                    ZIndex = 26
+                })
+                Button.Size = UDim2.new(1, 0, 0, 40)
+            end
+            
+            local Arrow = Create("ImageLabel", Button, {
+                Position = UDim2.new(1, -10, 0.5),
+                AnchorPoint = Vector2.new(1, 0.5),
+                Size = UDim2.new(0, 16, 0, 16),
+                BackgroundTransparency = 1,
+                Image = "rbxassetid://10709791437",
+                ImageColor3 = Theme["Color Stroke"],
+                ZIndex = 26
+            })
+            
+            Button.Activated:Connect(Callback)
+            
+            local BtnObj = {}
+            function BtnObj:Set(Val) Title.Text = Val end
+            function BtnObj:Destroy() Button:Destroy() end
+            return BtnObj
+        end
+        
+        -- Toggle
+        function Tab:AddToggle(Configs)
+            local TName = Configs[1] or Configs.Name or Configs.Title or "Toggle"
+            local TDesc = Configs.Desc or Configs.Description or ""
+            local Default = Configs.Default or false
+            local Callback = Configs.Callback or function() end
+            local Flag = Configs.Flag
+            
+            if Flag and Flags[Flag] ~= nil then Default = Flags[Flag] end
+            
+            local Button = Create("TextButton", Container, {
+                Size = UDim2.new(1, 0, 0, 30),
+                BackgroundColor3 = Theme["Color Hub 2"],
+                AutoButtonColor = false,
+                Text = "",
+                ZIndex = 25
+            })
+            AddCorner(Button, 6)
+            AddStroke(Button, Theme["Color Stroke"], 1)
+            
+            local Title = Create("TextLabel", Button, {
+                Position = UDim2.new(0, 10, 0.5),
+                AnchorPoint = Vector2.new(0, 0.5),
+                Size = UDim2.new(0.6, 0, 0.8, 0),
+                Text = TName,
+                TextColor3 = Theme["Color Text"],
+                TextXAlignment = "Left",
+                TextSize = 12,
+                Font = Enum.Font.GothamBold,
+                BackgroundTransparency = 1,
+                ZIndex = 26
+            })
+            
+            if TDesc ~= "" then
+                Create("TextLabel", Button, {
+                    Position = UDim2.new(0, 10, 1, -5),
+                    AnchorPoint = Vector2.new(0, 1),
+                    Size = UDim2.new(0.7, 0, 0, 10),
+                    Text = TDesc,
+                    TextColor3 = Theme["Color Dark Text"],
+                    TextXAlignment = "Left",
+                    TextSize = 8,
+                    Font = Enum.Font.Gotham,
+                    BackgroundTransparency = 1,
+                    ZIndex = 26
+                })
+                Button.Size = UDim2.new(1, 0, 0, 40)
+            end
+            
+            local ToggleFrame = Create("Frame", Button, {
+                Position = UDim2.new(1, -35, 0.5),
+                AnchorPoint = Vector2.new(1, 0.5),
+                Size = UDim2.new(0, 30, 0, 16),
+                BackgroundColor3 = Theme["Color Stroke"],
+                BackgroundTransparency = 0.7,
+                ZIndex = 27
+            })
+            AddCorner(ToggleFrame, 8)
+            
+            local Toggle = Create("Frame", ToggleFrame, {
+                Size = UDim2.new(0, 12, 0, 12),
+                Position = UDim2.new(Default and 1 or 0, Default and -2 or 2, 0.5),
+                AnchorPoint = Vector2.new(Default and 1 or 0, 0.5),
+                BackgroundColor3 = Theme["Color Theme"],
+                ZIndex = 28
+            })
+            AddCorner(Toggle, 6)
+            
+            local function SetToggle(val)
+                if val then
+                    TweenService:Create(Toggle, TweenInfo.new(0.2), {Position = UDim2.new(1, -2, 0.5), AnchorPoint = Vector2.new(1, 0.5)}):Play()
+                else
+                    TweenService:Create(Toggle, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5), AnchorPoint = Vector2.new(0, 0.5)}):Play()
+                end
+                Default = val
+                if Flag then Flags[Flag] = val end
+                Callback(val)
+            end
+            
+            Button.Activated:Connect(function() SetToggle(not Default) end)
+            
+            local ToggleObj = {}
+            function ToggleObj:Set(val) SetToggle(val) end
+            function ToggleObj:Destroy() Button:Destroy() end
+            return ToggleObj
+        end
+        
+        -- Dropdown
+        function Tab:AddDropdown(Configs)
+            local DName = Configs[1] or Configs.Name or Configs.Title or "Dropdown"
+            local DOptions = Configs.Options or {}
+            local Default = Configs.Default or (DOptions[1] or "")
+            local Callback = Configs.Callback or function() end
+            
+            local Button = Create("TextButton", Container, {
+                Size = UDim2.new(1, 0, 0, 35),
+                BackgroundColor3 = Theme["Color Hub 2"],
+                AutoButtonColor = false,
+                Text = "",
+                ZIndex = 25
+            })
+            AddCorner(Button, 6)
+            AddStroke(Button, Theme["Color Stroke"], 1)
+            
+            Create("TextLabel", Button, {
+                Position = UDim2.new(0, 10, 0.5),
+                AnchorPoint = Vector2.new(0, 0.5),
+                Size = UDim2.new(0.5, 0, 0.8, 0),
+                Text = DName,
+                TextColor3 = Theme["Color Text"],
+                TextXAlignment = "Left",
+                TextSize = 12,
+                Font = Enum.Font.GothamBold,
+                BackgroundTransparency = 1,
+                ZIndex = 26
+            })
+            
+            local ValueLabel = Create("TextLabel", Button, {
+                Position = UDim2.new(0.8, 0, 0.5),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Size = UDim2.new(0.15, 0, 0.8, 0),
+                Text = Default,
+                TextColor3 = Theme["Color Theme"],
+                TextSize = 11,
+                Font = Enum.Font.GothamBold,
+                BackgroundTransparency = 1,
+                ZIndex = 26
+            })
+            
+            local DropdownObj = {}
+            function DropdownObj:Refresh(options, keep)
+                -- placeholder
+            end
+            return DropdownObj
+        end
+        
+        -- Paragraph
+        function Tab:AddParagraph(Configs)
+            local PName = Configs[1] or Configs.Title or "Info"
+            local PDesc = Configs[2] or Configs.Content or ""
+            
+            local Frame = Create("Frame", Container, {
+                Size = UDim2.new(1, 0, 0, 35),
+                BackgroundColor3 = Theme["Color Hub 2"],
+                ZIndex = 25
+            })
+            AddCorner(Frame, 6)
+            AddStroke(Frame, Theme["Color Stroke"], 1)
+            
+            Create("TextLabel", Frame, {
+                Position = UDim2.new(0, 10, 0.3),
+                AnchorPoint = Vector2.new(0, 0.5),
+                Size = UDim2.new(1, -20, 0, 15),
+                Text = PName,
+                TextColor3 = Theme["Color Text"],
+                TextXAlignment = "Left",
+                TextSize = 12,
+                Font = Enum.Font.GothamBold,
+                BackgroundTransparency = 1,
+                ZIndex = 26
+            })
+            
+            local DescLabel = Create("TextLabel", Frame, {
+                Position = UDim2.new(0, 10, 0.7),
+                AnchorPoint = Vector2.new(0, 0.5),
+                Size = UDim2.new(1, -20, 0, 14),
+                Text = PDesc,
+                TextColor3 = Theme["Color Dark Text"],
+                TextXAlignment = "Left",
+                TextSize = 10,
+                Font = Enum.Font.Gotham,
+                BackgroundTransparency = 1,
+                ZIndex = 26
+            })
+            
+            local Paragraph = {}
+            function Paragraph:SetDesc(text) DescLabel.Text = text end
+            function Paragraph:Destroy() Frame:Destroy() end
+            return Paragraph
+        end
+        
+        -- TextBox
+        function Tab:AddTextBox(Configs)
+            local TName = Configs[1] or Configs.Name or Configs.Title or "Input"
+            local Placeholder = Configs.Placeholder or "Enter value..."
+            local Default = Configs.Default or ""
+            local Callback = Configs.Callback or function() end
+            
+            local Frame = Create("Frame", Container, {
+                Size = UDim2.new(1, 0, 0, 40),
+                BackgroundColor3 = Theme["Color Hub 2"],
+                ZIndex = 25
+            })
+            AddCorner(Frame, 6)
+            AddStroke(Frame, Theme["Color Stroke"], 1)
+            
+            Create("TextLabel", Frame, {
+                Position = UDim2.new(0, 10, 0.25),
+                AnchorPoint = Vector2.new(0, 0.5),
+                Size = UDim2.new(1, -20, 0, 15),
+                Text = TName,
+                TextColor3 = Theme["Color Text"],
+                TextXAlignment = "Left",
+                TextSize = 11,
+                Font = Enum.Font.GothamBold,
+                BackgroundTransparency = 1,
+                ZIndex = 26
+            })
+            
+            local BoxFrame = Create("Frame", Frame, {
+                Position = UDim2.new(0.5, 0, 0.7, 0),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Size = UDim2.new(0.9, 0, 0, 22),
+                BackgroundColor3 = Theme["Color Hub 2"],
+                ZIndex = 27
+            })
+            AddCorner(BoxFrame, 4)
+            AddStroke(BoxFrame, Theme["Color Stroke"], 1)
+            
+            local Box = Create("TextBox", BoxFrame, {
+                Size = UDim2.new(1, -8, 1, 0),
+                Position = UDim2.new(0, 4, 0, 0),
+                BackgroundTransparency = 1,
+                Text = Default,
+                PlaceholderText = Placeholder,
+                TextColor3 = Theme["Color Text"],
+                TextSize = 11,
+                Font = Enum.Font.Gotham,
+                ClearTextOnFocus = false,
+                ZIndex = 28
+            })
+            
+            Box.FocusLost:Connect(function() Callback(Box.Text) end)
+            
+            local TextBoxObj = {}
+            function TextBoxObj:Destroy() Frame:Destroy() end
+            return TextBoxObj
+        end
+        
+        -- DiscordInvite
+        function Tab:AddDiscordInvite(Configs)
+            if type(Configs[1]) == "table" then
+                -- Multiple cards
+                local ContainerFrame = Create("Frame", Container, {
+                    Size = UDim2.new(1, 0, 0, 160),
+                    BackgroundTransparency = 1,
+                    ZIndex = 25
+                })
+                
+                local Layout = Create("UIListLayout", ContainerFrame, {
+                    FillDirection = "Horizontal",
+                    HorizontalAlignment = "Center",
+                    Padding = UDim.new(0, 10)
+                })
+                
+                for i, card in ipairs(Configs) do
+                    local Card = Create("Frame", ContainerFrame, {
+                        Size = UDim2.new(0.45, 0, 1, 0),
+                        BackgroundColor3 = Theme["Color Hub 2"],
+                        ZIndex = 26
+                    })
+                    AddCorner(Card, 8)
+                    AddStroke(Card, Theme["Color Stroke"], 1.5)
+                    
+                    local Title = card[1] or "Server"
+                    local Desc = card[2] or ""
+                    local Icon = card[3] or "rbxassetid://134852113716171"
+                    local InviteLink = card[7] or "https://discord.gg/"
+                    
+                    Create("ImageLabel", Card, {
+                        Size = UDim2.new(0, 30, 0, 30),
+                        Position = UDim2.new(0, 10, 0, 10),
+                        Image = Icon,
+                        BackgroundTransparency = 1,
+                        ZIndex = 27
+                    })
+                    
+                    Create("TextLabel", Card, {
+                        Position = UDim2.new(0, 50, 0, 12),
+                        Size = UDim2.new(1, -60, 0, 16),
+                        Text = Title,
+                        TextColor3 = Theme["Color Text"],
+                        TextSize = 12,
+                        Font = Enum.Font.GothamBold,
+                        TextXAlignment = "Left",
+                        BackgroundTransparency = 1,
+                        ZIndex = 27
+                    })
+                    
+                    Create("TextLabel", Card, {
+                        Position = UDim2.new(0, 50, 0, 28),
+                        Size = UDim2.new(1, -60, 0, 30),
+                        Text = Desc,
+                        TextColor3 = Theme["Color Dark Text"],
+                        TextSize = 9,
+                        TextWrapped = true,
+                        TextXAlignment = "Left",
+                        BackgroundTransparency = 1,
+                        ZIndex = 27
+                    })
+                    
+                    local JoinBtn = Create("TextButton", Card, {
+                        Position = UDim2.new(0.5, 0, 1, -10),
+                        AnchorPoint = Vector2.new(0.5, 1),
+                        Size = UDim2.new(0.8, 0, 0, 24),
+                        Text = "JOIN",
+                        TextColor3 = Color3.fromRGB(255, 255, 255),
+                        TextSize = 11,
+                        Font = Enum.Font.GothamBold,
+                        BackgroundColor3 = Theme["Color Theme"],
+                        ZIndex = 28
+                    })
+                    AddCorner(JoinBtn, 12)
+                    
+                    JoinBtn.Activated:Connect(function()
+                        setclipboard(InviteLink)
+                        JoinBtn.Text = "COPIED!"
+                        task.wait(2)
+                        JoinBtn.Text = "JOIN"
+                    end)
+                end
+            else
+                -- Single card
+                local Title = Configs[1] or "Discord"
+                local Desc = Configs[2] or ""
+                local Logo = Configs[3] or "rbxassetid://134852113716171"
+                local Invite = Configs[4] or "https://discord.gg/"
+                
+                local Frame = Create("Frame", Container, {
+                    Size = UDim2.new(1, 0, 0, 80),
+                    BackgroundColor3 = Theme["Color Hub 2"],
+                    ZIndex = 25
+                })
+                AddCorner(Frame, 8)
+                AddStroke(Frame, Theme["Color Stroke"], 1.5)
+                
+                Create("ImageLabel", Frame, {
+                    Size = UDim2.new(0, 32, 0, 32),
+                    Position = UDim2.new(0, 10, 0.5),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    Image = Logo,
+                    BackgroundTransparency = 1,
+                    ZIndex = 26
+                })
+                
+                Create("TextLabel", Frame, {
+                    Position = UDim2.new(0, 50, 0, 15),
+                    Size = UDim2.new(0.5, 0, 0, 16),
+                    Text = Title,
+                    TextColor3 = Theme["Color Text"],
+                    TextSize = 12,
+                    Font = Enum.Font.GothamBold,
+                    TextXAlignment = "Left",
+                    BackgroundTransparency = 1,
+                    ZIndex = 26
+                })
+                
+                Create("TextLabel", Frame, {
+                    Position = UDim2.new(0, 50, 0, 32),
+                    Size = UDim2.new(0.5, 0, 0, 24),
+                    Text = Desc,
+                    TextColor3 = Theme["Color Dark Text"],
+                    TextSize = 9,
+                    TextWrapped = true,
+                    TextXAlignment = "Left",
+                    BackgroundTransparency = 1,
+                    ZIndex = 26
+                })
+                
+                local JoinBtn = Create("TextButton", Frame, {
+                    Position = UDim2.new(0.9, 0, 0.5),
+                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    Size = UDim2.new(0, 60, 0, 28),
+                    Text = "JOIN",
+                    TextColor3 = Color3.fromRGB(255, 255, 255),
+                    TextSize = 11,
+                    Font = Enum.Font.GothamBold,
+                    BackgroundColor3 = Theme["Color Theme"],
+                    ZIndex = 27
+                })
+                AddCorner(JoinBtn, 14)
+                
+                JoinBtn.Activated:Connect(function()
+                    setclipboard(Invite)
+                    JoinBtn.Text = "COPIED!"
+                    task.wait(2)
+                    JoinBtn.Text = "JOIN"
+                end)
+            end
+        end
+        
+        -- Profile
+        function Tab:AddProfile(Configs)
+            local Name = Configs.Name or "User"
+            local Bio = Configs.Bio or ""
+            local Avatar = Configs.Avatar or "rbxassetid://134852113716171"
+            
+            local Frame = Create("Frame", Container, {
+                Size = UDim2.new(1, 0, 0, 70),
+                BackgroundColor3 = Theme["Color Hub 2"],
+                ZIndex = 25
+            })
+            AddCorner(Frame, 8)
+            AddStroke(Frame, Theme["Color Stroke"], 1.5)
+            
+            Create("ImageLabel", Frame, {
+                Size = UDim2.new(0, 45, 0, 45),
+                Position = UDim2.new(0, 10, 0.5),
+                AnchorPoint = Vector2.new(0, 0.5),
+                Image = Avatar,
+                BackgroundTransparency = 1,
+                ZIndex = 26
+            })
+            AddCorner(Create("ImageLabel"), 23)
+            
+            Create("TextLabel", Frame, {
+                Position = UDim2.new(0, 65, 0, 20),
+                Size = UDim2.new(0.7, 0, 0, 16),
+                Text = Name,
+                TextColor3 = Theme["Color Text"],
+                TextSize = 13,
+                Font = Enum.Font.GothamBold,
+                TextXAlignment = "Left",
+                BackgroundTransparency = 1,
+                ZIndex = 26
+            })
+            
+            Create("TextLabel", Frame, {
+                Position = UDim2.new(0, 65, 0, 38),
+                Size = UDim2.new(0.7, 0, 0, 14),
+                Text = Bio,
+                TextColor3 = Theme["Color Dark Text"],
+                TextSize = 10,
+                TextXAlignment = "Left",
+                BackgroundTransparency = 1,
+                ZIndex = 26
+            })
+            
+            if Configs.Verified then
+                Create("ImageLabel", Frame, {
+                    Size = UDim2.new(0, 14, 0, 14),
+                    Position = UDim2.new(0, 65 + (string.len(Name) * 6), 0, 21),
+                    Image = "rbxassetid://10709752907",
+                    ImageColor3 = Theme["Color Theme"],
+                    BackgroundTransparency = 1,
+                    ZIndex = 27
+                })
+            end
+        end
+        
+        return Tab
+    end
+    
+    -- Toggle button để mở/đóng GUI
+    local ToggleGui = Instance.new("ScreenGui")
+    ToggleGui.Name = "BearHub_Toggle"
+    ToggleGui.Parent = CoreGui
+    
+    local ToggleBtn = Instance.new("ImageButton")
+    ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+    ToggleBtn.Position = UDim2.new(0.15, 0, 0.15, 0)
+    ToggleBtn.Image = "rbxassetid://115377474207871"
+    ToggleBtn.BackgroundTransparency = 1
+    ToggleBtn.Draggable = true
+    ToggleBtn.Parent = ToggleGui
+    
+    AddCorner(ToggleBtn, 25)
+    AddStroke(ToggleBtn, Theme["Color Stroke"], 2)
+    
+    ToggleBtn.MouseButton1Click:Connect(function()
+        MainFrame.Visible = not MainFrame.Visible
+    end)
+    
+    return Window
+end
+
+-- Toast Notification
+local ToastContainer = ScreenGui:FindFirstChild("ToastContainer")
+if not ToastContainer then
+    ToastContainer = Instance.new("Frame")
+    ToastContainer.Name = "ToastContainer"
+    ToastContainer.Size = UDim2.new(0, 300, 1, -20)
+    ToastContainer.Position = UDim2.new(1, -310, 0, 10)
+    ToastContainer.BackgroundTransparency = 1
+    ToastContainer.Parent = ScreenGui
+    ToastContainer.ZIndex = 100
+    
+    local ToastListLayout = Instance.new("UIListLayout")
+    ToastListLayout.SortOrder = "LayoutOrder"
+    ToastListLayout.HorizontalAlignment = "Right"
+    ToastListLayout.VerticalAlignment = "Bottom"
+    ToastListLayout.Padding = UDim.new(0, 8)
+    ToastListLayout.Parent = ToastContainer
+end
+
+function bearlib:ShowToast(text, duration)
+    duration = duration or 5
+    
+    local ToastFrame = Instance.new("Frame")
+    ToastFrame.Size = UDim2.new(0, 280, 0, 0)
+    ToastFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    ToastFrame.ClipsDescendants = true
+    ToastFrame.LayoutOrder = -tick()
+    ToastFrame.Parent = ToastContainer
+    ToastFrame.ZIndex = 101
+    AddCorner(ToastFrame, 14)
+    AddStroke(ToastFrame, Theme["Color Stroke"], 2)
+    
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, -20, 0, 18)
+    Title.Position = UDim2.new(0, 10, 0, 8)
+    Title.Text = "BEAR HUB"
+    Title.Font = Enum.Font.GothamBold
+    Title.TextColor3 = Theme["Color Theme"]
+    Title.TextSize = 14
+    Title.TextXAlignment = "Left"
+    Title.BackgroundTransparency = 1
+    Title.Parent = ToastFrame
+    
+    local Msg = Instance.new("TextLabel")
+    Msg.Size = UDim2.new(1, -20, 0, 30)
+    Msg.Position = UDim2.new(0, 10, 0, 28)
+    Msg.Text = text
+    Msg.Font = Enum.Font.Gotham
+    Msg.TextColor3 = Theme["Color Dark Text"]
+    Msg.TextSize = 12
+    Msg.TextWrapped = true
+    Msg.BackgroundTransparency = 1
+    Msg.Parent = ToastFrame
+    
+    local TimeText = Instance.new("TextLabel")
+    TimeText.Size = UDim2.new(0, 40, 0, 16)
+    TimeText.Position = UDim2.new(1, -45, 0, 8)
+    TimeText.Text = tostring(duration)
+    TimeText.Font = Enum.Font.FredokaOne
+    TimeText.TextColor3 = Theme["Color Text"]
+    TimeText.TextSize = 14
+    TimeText.BackgroundTransparency = 1
+    TimeText.Parent = ToastFrame
+    
+    local Progress = Instance.new("Frame")
+    Progress.Size = UDim2.new(1, -20, 0, 3)
+    Progress.Position = UDim2.new(0, 10, 0, 62)
+    Progress.BackgroundColor3 = Theme["Color Stroke"]
+    Progress.BackgroundTransparency = 0.7
+    Progress.Parent = ToastFrame
+    AddCorner(Progress, 1)
+    
+    local ProgressBar = Instance.new("Frame")
+    ProgressBar.Size = UDim2.new(1, 0, 1, 0)
+    ProgressBar.BackgroundColor3 = Theme["Color Theme"]
+    ProgressBar.Parent = Progress
+    AddCorner(ProgressBar, 1)
+    
+    ToastFrame.Size = UDim2.new(0, 280, 0, 75)
+    
+    local remaining = duration
+    local connection
+    
+    local function Update()
+        remaining = remaining - 0.1
+        if remaining <= 0 then
+            connection:Disconnect()
+            ToastFrame:Destroy()
+        else
+            TimeText.Text = tostring(math.ceil(remaining))
+            ProgressBar.Size = UDim2.new(remaining / duration, 0, 1, 0)
+        end
+    end
+    
+    connection = RunService.Heartbeat:Connect(Update)
+end
+
+print("[BEARLIB] Loaded successfully - Compatible with Abacaxi Hub")
+return bearlib
