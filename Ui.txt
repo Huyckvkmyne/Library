@@ -84,7 +84,6 @@ local function LoadJson(FileName)
     return success and decoded or nil
 end
 
--- Hàm tạo instance
 local function Create(...)
     local args = {...}
     if type(args) ~= "table" then return end
@@ -102,7 +101,6 @@ local function Create(...)
     return new
 end
 
--- ScreenGui chính
 local ScreenGui = Create("ScreenGui", CoreGui, {
     Name = "BearHub_DarkBlue",
     ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -117,7 +115,20 @@ end
 
 local Theme = bearlib.Themes[bearlib.Save.Theme]
 
--- Hàm kéo
+local function AddCorner(instance, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius or 7)
+    corner.Parent = instance
+end
+
+local function AddStroke(instance, color, thickness)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color or Theme["Color Stroke"]
+    stroke.Thickness = thickness or 1
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = instance
+end
+
 local function MakeDrag(Instance)
     task.spawn(function()
         Instance.Active = true
@@ -150,23 +161,7 @@ local function MakeDrag(Instance)
     return Instance
 end
 
--- Hàm tạo góc bo tròn
-local function AddCorner(instance, radius)
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, radius or 7)
-    corner.Parent = instance
-end
-
--- Hàm tạo viền
-local function AddStroke(instance, color, thickness)
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = color or Theme["Color Stroke"]
-    stroke.Thickness = thickness or 1
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Parent = instance
-end
-
--- ==================== CỬA SỔ CHÍNH ====================
+-- ==================== MAIN WINDOW ====================
 function bearlib:MakeWindow(Configs)
     local WTitle = Configs[1] or Configs.Name or Configs.Title or "Bear Hub"
     local WMiniText = Configs[2] or Configs.SubTitle or "by Quang Huy"
@@ -181,7 +176,6 @@ function bearlib:MakeWindow(Configs)
         Settings.ScriptFile = nil
     end
     
-    -- Load flags từ file
     if self.SaveEnabled then
         local decoded = LoadJson(self.SaveFile)
         if type(decoded) == "table" then
@@ -191,7 +185,6 @@ function bearlib:MakeWindow(Configs)
     
     local UISizeX, UISizeY = unpack(bearlib.Save.UISize)
     
-    -- Main Frame
     local MainFrame = Create("ImageButton", ScreenGui, {
         Size = UDim2.fromOffset(UISizeX, UISizeY),
         Position = UDim2.new(0.5, -UISizeX/2, 0.5, -UISizeY/2),
@@ -205,37 +198,6 @@ function bearlib:MakeWindow(Configs)
     AddStroke(MainFrame, Theme["Color Stroke"], 1.5)
     MakeDrag(MainFrame)
     
-    -- Hiệu ứng hạt rơi
-    local ParticleFolder = Create("Folder", MainFrame, {Name = "Particles"})
-    task.spawn(function()
-        for i = 1, 30 do
-            local ParticleSize = math.random(2, 5)
-            local Particle = Create("Frame", MainFrame, {
-                BackgroundColor3 = Theme["Color Theme"],
-                BackgroundTransparency = math.random(5, 8) / 10,
-                Size = UDim2.fromOffset(ParticleSize, ParticleSize),
-                Position = UDim2.fromScale(math.random(), math.random()),
-                Rotation = math.random(0, 360),
-                Name = "Particle_" .. i,
-                ZIndex = 0
-            })
-            AddCorner(Particle, ParticleSize/2)
-            
-            task.spawn(function()
-                while Particle and Particle.Parent do
-                    local speed = math.random(5, 8)
-                    local targetPos = UDim2.fromScale(Particle.Position.X.Scale, 1.2)
-                    local tween = TweenService:Create(Particle, TweenInfo.new(speed, Enum.EasingStyle.Linear), {Position = targetPos})
-                    tween:Play()
-                    tween.Completed:Wait()
-                    if Particle and Particle.Parent then
-                        Particle.Position = UDim2.fromScale(math.random(), -0.1)
-                    end
-                end
-            end)
-        end
-    end)
-    
     -- TopBar
     local TopBar = Create("Frame", MainFrame, {
         Size = UDim2.new(1, 0, 0, 35),
@@ -246,7 +208,6 @@ function bearlib:MakeWindow(Configs)
     })
     AddCorner(TopBar, 12)
     
-    -- Title
     local Title = Create("TextLabel", TopBar, {
         Position = UDim2.new(0, 15, 0.5),
         AnchorPoint = Vector2.new(0, 0.5),
@@ -293,7 +254,6 @@ function bearlib:MakeWindow(Configs)
         Create("UIListLayout", {Padding = UDim.new(0, 6)})
     })
     
-    -- Container chính
     local Containers = Create("Frame", MainFrame, {
         Size = UDim2.new(1, -bearlib.Save.TabSize, 1, -35),
         Position = UDim2.new(1, 0, 1, 0),
@@ -304,7 +264,6 @@ function bearlib:MakeWindow(Configs)
         ZIndex = 20
     })
     
-    -- Buttons trên TopBar
     local ButtonsFolder = Create("Frame", TopBar, {
         Size = UDim2.new(0, 70, 1, 0),
         Position = UDim2.new(1, -15, 0),
@@ -333,27 +292,10 @@ function bearlib:MakeWindow(Configs)
         ZIndex = 25
     })
     
-    -- Control Size
-    local ControlSize = MakeDrag(Create("ImageButton", MainFrame, {
-        Size = UDim2.new(0, 30, 0, 30),
-        Position = MainFrame.Size,
-        AnchorPoint = Vector2.new(0.8, 0.8),
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://10747384394",
-        ImageColor3 = Theme["Color Stroke"],
-        Name = "ControlSize",
-        ZIndex = 30
-    }))
-    
-    ControlSize:GetPropertyChangedSignal("Position"):Connect(function()
-        MainFrame.Size = ControlSize.Position
-        bearlib.Save.UISize = {MainFrame.Size.X.Offset, MainFrame.Size.Y.Offset}
-        if bearlib.SaveEnabled then SaveJson(bearlib.SaveFile, bearlib.Save) end
-    end)
-    
-    -- Window object
-    local Window, FirstTab = {}, true
-    local Minimized, SaveSize
+    local Window = {}
+    local FirstTab = true
+    local Minimized = false
+    local SaveSize
     
     function Window:CloseBtn()
         ScreenGui:Destroy()
@@ -365,12 +307,10 @@ function bearlib:MakeWindow(Configs)
         if Minimized then
             MinimizeButton.Image = "rbxassetid://10734896206"
             MainFrame.Size = SaveSize
-            ControlSize.Visible = true
             Minimized = false
         else
             MinimizeButton.Image = "rbxassetid://10734924532"
             SaveSize = MainFrame.Size
-            ControlSize.Visible = false
             MainFrame.Size = UDim2.fromOffset(MainFrame.Size.X.Offset, 35)
             Minimized = true
         end
@@ -379,14 +319,11 @@ function bearlib:MakeWindow(Configs)
     CloseButton.Activated:Connect(Window.CloseBtn)
     MinimizeButton.Activated:Connect(Window.MinimizeBtn)
     
-    -- Hệ thống Tab
-    local ContainerList = {}
-    
+    -- ==================== TAB CREATION ====================
     function Window:MakeTab(Configs)
         local TName = Configs[1] or Configs.Title or "Tab"
         local TIcon = Configs[2] or Configs.Icon or ""
         
-        -- Tab Button
         local TabSelect = Create("TextButton", TabScroll, {
             Size = UDim2.new(1, 0, 0, 28),
             BackgroundColor3 = Theme["Color Hub 2"],
@@ -406,10 +343,21 @@ function bearlib:MakeWindow(Configs)
         })
         AddCorner(SelectedIndicator, 2)
         
+        if TIcon ~= "" then
+            Create("ImageLabel", TabSelect, {
+                Position = UDim2.new(0, 8, 0.5),
+                AnchorPoint = Vector2.new(0, 0.5),
+                Size = UDim2.new(0, 16, 0, 16),
+                Image = TIcon,
+                BackgroundTransparency = 1,
+                ZIndex = 26
+            })
+        end
+        
         local TabTitle = Create("TextLabel", TabSelect, {
-            Position = UDim2.new(0, 12, 0.5),
+            Position = TIcon ~= "" and UDim2.new(0, 28, 0.5) or UDim2.new(0, 8, 0.5),
             AnchorPoint = Vector2.new(0, 0.5),
-            Size = UDim2.new(1, -20, 0.8, 0),
+            Size = UDim2.new(1, -30, 0.8, 0),
             Text = TName,
             TextColor3 = Theme["Color Text"],
             TextTransparency = FirstTab and 0 or 0.3,
@@ -420,7 +368,6 @@ function bearlib:MakeWindow(Configs)
             ZIndex = 26
         })
         
-        -- Container cho tab
         local Container = Create("ScrollingFrame", {
             Size = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency = 1,
@@ -436,48 +383,32 @@ function bearlib:MakeWindow(Configs)
             Create("UIListLayout", {Padding = UDim.new(0, 8)})
         })
         
-        table.insert(ContainerList, Container)
-        if not FirstTab then Container.Parent = nil end
+        if not FirstTab then Container.Parent = nil else Container.Parent = Containers end
         
         local function SelectTab()
-            for _, c in pairs(ContainerList) do
-                if c ~= Container then c.Parent = nil end
-            end
             Container.Parent = Containers
-            
-            for _, tab in pairs(bearlib.Tabs) do
-                if tab.Cont ~= Container then
-                    tab.func:Disable()
+            for _, child in pairs(Containers:GetChildren()) do
+                if child:IsA("ScrollingFrame") and child ~= Container then
+                    child.Parent = nil
                 end
             end
-            CreateTween({TabTitle, "TextTransparency", 0, 0.2})
-            CreateTween({SelectedIndicator, "Size", UDim2.new(0, 4, 0, 20), 0.2})
-            CreateTween({SelectedIndicator, "BackgroundTransparency", 0, 0.2})
+            TabTitle.TextTransparency = 0
+            SelectedIndicator.Size = UDim2.new(0, 4, 0, 20)
+            SelectedIndicator.BackgroundTransparency = 0
         end
         TabSelect.Activated:Connect(SelectTab)
         
         FirstTab = false
+        
         local Tab = {}
-        table.insert(bearlib.Tabs, {func = Tab, Cont = Container})
-        Tab.Cont = Container
-        
-        function Tab:Disable()
-            Container.Parent = nil
-            CreateTween({TabTitle, "TextTransparency", 0.3, 0.2})
-            CreateTween({SelectedIndicator, "Size", UDim2.new(0, 4, 0, 4), 0.2})
-            CreateTween({SelectedIndicator, "BackgroundTransparency", 1, 0.2})
-        end
-        
-        function Tab:Enable()
-            SelectTab()
-        end
+        Tab.Container = Container
         
         -- Section
-        local CurrentSectionName = nil
+        local CurrentSection = nil
         
-        function Tab:AddSection(Configs)
-            local SectionName = type(Configs) == "string" and Configs or Configs[1] or Configs.Name or Configs.Title
-            CurrentSectionName = SectionName
+        function Tab:AddSection(config)
+            local SectionName = type(config) == "string" and config or config.Name or config.Title or "Section"
+            CurrentSection = SectionName
             
             local SectionFrame = Create("Frame", Container, {
                 Size = UDim2.new(1, 0, 0, 24),
@@ -485,7 +416,7 @@ function bearlib:MakeWindow(Configs)
                 ZIndex = 25
             })
             
-            local SectionLabel = Create("TextLabel", SectionFrame, {
+            Create("TextLabel", SectionFrame, {
                 Position = UDim2.new(0, 8, 0.5),
                 AnchorPoint = Vector2.new(0, 0.5),
                 Size = UDim2.new(1, -20, 0.8, 0),
@@ -498,29 +429,23 @@ function bearlib:MakeWindow(Configs)
                 ZIndex = 26
             })
             
-            local Underline = Create("Frame", SectionFrame, {
+            Create("Frame", SectionFrame, {
                 Size = UDim2.new(1, -20, 0, 2),
                 Position = UDim2.new(0, 10, 1, -2),
                 BackgroundColor3 = Theme["Color Stroke"],
                 BackgroundTransparency = 0.5,
                 ZIndex = 26
             })
-            AddCorner(Underline, 1)
-            
-            local Section = {}
-            function Section:Set(New) SectionLabel.Text = New end
-            function Section:Destroy() SectionFrame:Destroy() end
-            return Section
         end
         
         -- Button
-        function Tab:AddButton(Configs)
-            local BName = Configs[1] or Configs.Name or Configs.Title or "Button"
-            local BDesc = Configs.Desc or Configs.Description or ""
-            local Callback = Configs.Callback or function() end
+        function Tab:AddButton(config)
+            local Name = config.Name or config[1] or "Button"
+            local Desc = config.Desc or config.Description or ""
+            local Callback = config.Callback or function() end
             
             local Button = Create("TextButton", Container, {
-                Size = UDim2.new(1, 0, 0, 30),
+                Size = UDim2.new(1, 0, 0, Desc ~= "" and 40 or 30),
                 BackgroundColor3 = Theme["Color Hub 2"],
                 AutoButtonColor = false,
                 Text = "",
@@ -529,11 +454,11 @@ function bearlib:MakeWindow(Configs)
             AddCorner(Button, 6)
             AddStroke(Button, Theme["Color Stroke"], 1)
             
-            local Title = Create("TextLabel", Button, {
-                Position = UDim2.new(0, 10, 0.5),
+            Create("TextLabel", Button, {
+                Position = UDim2.new(0, 10, Desc ~= "" and 0.35 or 0.5),
                 AnchorPoint = Vector2.new(0, 0.5),
                 Size = UDim2.new(0.7, 0, 0.8, 0),
-                Text = BName,
+                Text = Name,
                 TextColor3 = Theme["Color Text"],
                 TextXAlignment = "Left",
                 TextSize = 12,
@@ -542,52 +467,34 @@ function bearlib:MakeWindow(Configs)
                 ZIndex = 26
             })
             
-            if BDesc ~= "" then
+            if Desc ~= "" then
                 Create("TextLabel", Button, {
-                    Position = UDim2.new(0, 10, 1, -5),
-                    AnchorPoint = Vector2.new(0, 1),
-                    Size = UDim2.new(0.9, 0, 0, 10),
-                    Text = BDesc,
+                    Position = UDim2.new(0, 10, 0.8, 0),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    Size = UDim2.new(0.8, 0, 0, 12),
+                    Text = Desc,
                     TextColor3 = Theme["Color Dark Text"],
                     TextXAlignment = "Left",
-                    TextSize = 8,
+                    TextSize = 9,
                     Font = Enum.Font.Gotham,
                     BackgroundTransparency = 1,
                     ZIndex = 26
                 })
-                Button.Size = UDim2.new(1, 0, 0, 40)
             end
             
-            local Arrow = Create("ImageLabel", Button, {
-                Position = UDim2.new(1, -10, 0.5),
-                AnchorPoint = Vector2.new(1, 0.5),
-                Size = UDim2.new(0, 16, 0, 16),
-                BackgroundTransparency = 1,
-                Image = "rbxassetid://10709791437",
-                ImageColor3 = Theme["Color Stroke"],
-                ZIndex = 26
-            })
-            
             Button.Activated:Connect(Callback)
-            
-            local BtnObj = {}
-            function BtnObj:Set(Val) Title.Text = Val end
-            function BtnObj:Destroy() Button:Destroy() end
-            return BtnObj
         end
         
         -- Toggle
-        function Tab:AddToggle(Configs)
-            local TName = Configs[1] or Configs.Name or Configs.Title or "Toggle"
-            local TDesc = Configs.Desc or Configs.Description or ""
-            local Default = Configs.Default or false
-            local Callback = Configs.Callback or function() end
-            local Flag = Configs.Flag
-            
-            if Flag and Flags[Flag] ~= nil then Default = Flags[Flag] end
+        function Tab:AddToggle(config)
+            local Name = config.Name or config[1] or "Toggle"
+            local Desc = config.Desc or config.Description or ""
+            local Default = config.Default or false
+            local Callback = config.Callback or function() end
+            local Flag = config.Flag
             
             local Button = Create("TextButton", Container, {
-                Size = UDim2.new(1, 0, 0, 30),
+                Size = UDim2.new(1, 0, 0, Desc ~= "" and 40 or 30),
                 BackgroundColor3 = Theme["Color Hub 2"],
                 AutoButtonColor = false,
                 Text = "",
@@ -596,11 +503,11 @@ function bearlib:MakeWindow(Configs)
             AddCorner(Button, 6)
             AddStroke(Button, Theme["Color Stroke"], 1)
             
-            local Title = Create("TextLabel", Button, {
-                Position = UDim2.new(0, 10, 0.5),
+            Create("TextLabel", Button, {
+                Position = UDim2.new(0, 10, Desc ~= "" and 0.35 or 0.5),
                 AnchorPoint = Vector2.new(0, 0.5),
                 Size = UDim2.new(0.6, 0, 0.8, 0),
-                Text = TName,
+                Text = Name,
                 TextColor3 = Theme["Color Text"],
                 TextXAlignment = "Left",
                 TextSize = 12,
@@ -609,20 +516,19 @@ function bearlib:MakeWindow(Configs)
                 ZIndex = 26
             })
             
-            if TDesc ~= "" then
+            if Desc ~= "" then
                 Create("TextLabel", Button, {
-                    Position = UDim2.new(0, 10, 1, -5),
-                    AnchorPoint = Vector2.new(0, 1),
-                    Size = UDim2.new(0.7, 0, 0, 10),
-                    Text = TDesc,
+                    Position = UDim2.new(0, 10, 0.8, 0),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    Size = UDim2.new(0.7, 0, 0, 12),
+                    Text = Desc,
                     TextColor3 = Theme["Color Dark Text"],
                     TextXAlignment = "Left",
-                    TextSize = 8,
+                    TextSize = 9,
                     Font = Enum.Font.Gotham,
                     BackgroundTransparency = 1,
                     ZIndex = 26
                 })
-                Button.Size = UDim2.new(1, 0, 0, 40)
             end
             
             local ToggleFrame = Create("Frame", Button, {
@@ -644,31 +550,26 @@ function bearlib:MakeWindow(Configs)
             })
             AddCorner(Toggle, 6)
             
-            local function SetToggle(val)
+            local state = Default
+            local function SetState(val)
+                state = val
                 if val then
                     TweenService:Create(Toggle, TweenInfo.new(0.2), {Position = UDim2.new(1, -2, 0.5), AnchorPoint = Vector2.new(1, 0.5)}):Play()
                 else
                     TweenService:Create(Toggle, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5), AnchorPoint = Vector2.new(0, 0.5)}):Play()
                 end
-                Default = val
-                if Flag then Flags[Flag] = val end
                 Callback(val)
             end
             
-            Button.Activated:Connect(function() SetToggle(not Default) end)
-            
-            local ToggleObj = {}
-            function ToggleObj:Set(val) SetToggle(val) end
-            function ToggleObj:Destroy() Button:Destroy() end
-            return ToggleObj
+            Button.Activated:Connect(function() SetState(not state) end)
         end
         
         -- Dropdown
-        function Tab:AddDropdown(Configs)
-            local DName = Configs[1] or Configs.Name or Configs.Title or "Dropdown"
-            local DOptions = Configs.Options or {}
-            local Default = Configs.Default or (DOptions[1] or "")
-            local Callback = Configs.Callback or function() end
+        function Tab:AddDropdown(config)
+            local Name = config.Name or config[1] or "Dropdown"
+            local Options = config.Options or {}
+            local Default = config.Default or (Options[1] or "")
+            local Callback = config.Callback or function() end
             
             local Button = Create("TextButton", Container, {
                 Size = UDim2.new(1, 0, 0, 35),
@@ -684,7 +585,7 @@ function bearlib:MakeWindow(Configs)
                 Position = UDim2.new(0, 10, 0.5),
                 AnchorPoint = Vector2.new(0, 0.5),
                 Size = UDim2.new(0.5, 0, 0.8, 0),
-                Text = DName,
+                Text = Name,
                 TextColor3 = Theme["Color Text"],
                 TextXAlignment = "Left",
                 TextSize = 12,
@@ -694,9 +595,9 @@ function bearlib:MakeWindow(Configs)
             })
             
             local ValueLabel = Create("TextLabel", Button, {
-                Position = UDim2.new(0.8, 0, 0.5),
-                AnchorPoint = Vector2.new(0.5, 0.5),
-                Size = UDim2.new(0.15, 0, 0.8, 0),
+                Position = UDim2.new(0.9, -10, 0.5),
+                AnchorPoint = Vector2.new(1, 0.5),
+                Size = UDim2.new(0.3, 0, 0.8, 0),
                 Text = Default,
                 TextColor3 = Theme["Color Theme"],
                 TextSize = 11,
@@ -704,21 +605,15 @@ function bearlib:MakeWindow(Configs)
                 BackgroundTransparency = 1,
                 ZIndex = 26
             })
-            
-            local DropdownObj = {}
-            function DropdownObj:Refresh(options, keep)
-                -- placeholder
-            end
-            return DropdownObj
         end
         
         -- Paragraph
-        function Tab:AddParagraph(Configs)
-            local PName = Configs[1] or Configs.Title or "Info"
-            local PDesc = Configs[2] or Configs.Content or ""
+        function Tab:AddParagraph(config)
+            local Title = config.Title or config[1] or "Info"
+            local Content = config.Content or config.Desc or config[2] or ""
             
             local Frame = Create("Frame", Container, {
-                Size = UDim2.new(1, 0, 0, 35),
+                Size = UDim2.new(1, 0, 0, 40),
                 BackgroundColor3 = Theme["Color Hub 2"],
                 ZIndex = 25
             })
@@ -729,7 +624,7 @@ function bearlib:MakeWindow(Configs)
                 Position = UDim2.new(0, 10, 0.3),
                 AnchorPoint = Vector2.new(0, 0.5),
                 Size = UDim2.new(1, -20, 0, 15),
-                Text = PName,
+                Text = Title,
                 TextColor3 = Theme["Color Text"],
                 TextXAlignment = "Left",
                 TextSize = 12,
@@ -742,7 +637,7 @@ function bearlib:MakeWindow(Configs)
                 Position = UDim2.new(0, 10, 0.7),
                 AnchorPoint = Vector2.new(0, 0.5),
                 Size = UDim2.new(1, -20, 0, 14),
-                Text = PDesc,
+                Text = Content,
                 TextColor3 = Theme["Color Dark Text"],
                 TextXAlignment = "Left",
                 TextSize = 10,
@@ -750,19 +645,14 @@ function bearlib:MakeWindow(Configs)
                 BackgroundTransparency = 1,
                 ZIndex = 26
             })
-            
-            local Paragraph = {}
-            function Paragraph:SetDesc(text) DescLabel.Text = text end
-            function Paragraph:Destroy() Frame:Destroy() end
-            return Paragraph
         end
         
         -- TextBox
-        function Tab:AddTextBox(Configs)
-            local TName = Configs[1] or Configs.Name or Configs.Title or "Input"
-            local Placeholder = Configs.Placeholder or "Enter value..."
-            local Default = Configs.Default or ""
-            local Callback = Configs.Callback or function() end
+        function Tab:AddTextBox(config)
+            local Name = config.Name or config[1] or "Input"
+            local Placeholder = config.Placeholder or config.PlaceHolder or "Enter..."
+            local Default = config.Default or ""
+            local Callback = config.Callback or function() end
             
             local Frame = Create("Frame", Container, {
                 Size = UDim2.new(1, 0, 0, 40),
@@ -776,7 +666,7 @@ function bearlib:MakeWindow(Configs)
                 Position = UDim2.new(0, 10, 0.25),
                 AnchorPoint = Vector2.new(0, 0.5),
                 Size = UDim2.new(1, -20, 0, 15),
-                Text = TName,
+                Text = Name,
                 TextColor3 = Theme["Color Text"],
                 TextXAlignment = "Left",
                 TextSize = 11,
@@ -809,89 +699,74 @@ function bearlib:MakeWindow(Configs)
             })
             
             Box.FocusLost:Connect(function() Callback(Box.Text) end)
-            
-            local TextBoxObj = {}
-            function TextBoxObj:Destroy() Frame:Destroy() end
-            return TextBoxObj
         end
         
-        -- DiscordInvite
-        function Tab:AddDiscordInvite(Configs)
-            if type(Configs[1]) == "table" then
+        -- Discord Invite
+        function Tab:AddDiscordInvite(config)
+            if type(config[1]) == "table" then
                 -- Multiple cards
-                local ContainerFrame = Create("Frame", Container, {
-                    Size = UDim2.new(1, 0, 0, 160),
-                    BackgroundTransparency = 1,
-                    ZIndex = 25
-                })
-                
-                local Layout = Create("UIListLayout", ContainerFrame, {
-                    FillDirection = "Horizontal",
-                    HorizontalAlignment = "Center",
-                    Padding = UDim.new(0, 10)
-                })
-                
-                for i, card in ipairs(Configs) do
-                    local Card = Create("Frame", ContainerFrame, {
-                        Size = UDim2.new(0.45, 0, 1, 0),
-                        BackgroundColor3 = Theme["Color Hub 2"],
-                        ZIndex = 26
-                    })
-                    AddCorner(Card, 8)
-                    AddStroke(Card, Theme["Color Stroke"], 1.5)
-                    
-                    local Title = card[1] or "Server"
+                for i, card in ipairs(config) do
+                    local Title = card[1] or "Discord"
                     local Desc = card[2] or ""
                     local Icon = card[3] or "rbxassetid://134852113716171"
-                    local InviteLink = card[7] or "https://discord.gg/"
+                    local Invite = card[7] or "https://discord.gg/"
                     
-                    Create("ImageLabel", Card, {
-                        Size = UDim2.new(0, 30, 0, 30),
-                        Position = UDim2.new(0, 10, 0, 10),
+                    local Frame = Create("Frame", Container, {
+                        Size = UDim2.new(1, 0, 0, 80),
+                        BackgroundColor3 = Theme["Color Hub 2"],
+                        ZIndex = 25
+                    })
+                    AddCorner(Frame, 8)
+                    AddStroke(Frame, Theme["Color Stroke"], 1.5)
+                    
+                    Create("ImageLabel", Frame, {
+                        Size = UDim2.new(0, 32, 0, 32),
+                        Position = UDim2.new(0, 10, 0.5),
+                        AnchorPoint = Vector2.new(0, 0.5),
                         Image = Icon,
                         BackgroundTransparency = 1,
-                        ZIndex = 27
+                        ZIndex = 26
                     })
                     
-                    Create("TextLabel", Card, {
-                        Position = UDim2.new(0, 50, 0, 12),
-                        Size = UDim2.new(1, -60, 0, 16),
+                    Create("TextLabel", Frame, {
+                        Position = UDim2.new(0, 50, 0, 20),
+                        Size = UDim2.new(0.5, 0, 0, 16),
                         Text = Title,
                         TextColor3 = Theme["Color Text"],
                         TextSize = 12,
                         Font = Enum.Font.GothamBold,
                         TextXAlignment = "Left",
                         BackgroundTransparency = 1,
-                        ZIndex = 27
+                        ZIndex = 26
                     })
                     
-                    Create("TextLabel", Card, {
-                        Position = UDim2.new(0, 50, 0, 28),
-                        Size = UDim2.new(1, -60, 0, 30),
+                    Create("TextLabel", Frame, {
+                        Position = UDim2.new(0, 50, 0, 38),
+                        Size = UDim2.new(0.5, 0, 0, 20),
                         Text = Desc,
                         TextColor3 = Theme["Color Dark Text"],
                         TextSize = 9,
                         TextWrapped = true,
                         TextXAlignment = "Left",
                         BackgroundTransparency = 1,
-                        ZIndex = 27
+                        ZIndex = 26
                     })
                     
-                    local JoinBtn = Create("TextButton", Card, {
-                        Position = UDim2.new(0.5, 0, 1, -10),
-                        AnchorPoint = Vector2.new(0.5, 1),
-                        Size = UDim2.new(0.8, 0, 0, 24),
+                    local JoinBtn = Create("TextButton", Frame, {
+                        Position = UDim2.new(0.9, 0, 0.5),
+                        AnchorPoint = Vector2.new(0.5, 0.5),
+                        Size = UDim2.new(0, 60, 0, 28),
                         Text = "JOIN",
                         TextColor3 = Color3.fromRGB(255, 255, 255),
                         TextSize = 11,
                         Font = Enum.Font.GothamBold,
                         BackgroundColor3 = Theme["Color Theme"],
-                        ZIndex = 28
+                        ZIndex = 27
                     })
-                    AddCorner(JoinBtn, 12)
+                    AddCorner(JoinBtn, 14)
                     
                     JoinBtn.Activated:Connect(function()
-                        setclipboard(InviteLink)
+                        setclipboard(Invite)
                         JoinBtn.Text = "COPIED!"
                         task.wait(2)
                         JoinBtn.Text = "JOIN"
@@ -899,10 +774,10 @@ function bearlib:MakeWindow(Configs)
                 end
             else
                 -- Single card
-                local Title = Configs[1] or "Discord"
-                local Desc = Configs[2] or ""
-                local Logo = Configs[3] or "rbxassetid://134852113716171"
-                local Invite = Configs[4] or "https://discord.gg/"
+                local Title = config[1] or "Discord"
+                local Desc = config[2] or ""
+                local Icon = config[3] or "rbxassetid://134852113716171"
+                local Invite = config[4] or "https://discord.gg/"
                 
                 local Frame = Create("Frame", Container, {
                     Size = UDim2.new(1, 0, 0, 80),
@@ -916,13 +791,13 @@ function bearlib:MakeWindow(Configs)
                     Size = UDim2.new(0, 32, 0, 32),
                     Position = UDim2.new(0, 10, 0.5),
                     AnchorPoint = Vector2.new(0, 0.5),
-                    Image = Logo,
+                    Image = Icon,
                     BackgroundTransparency = 1,
                     ZIndex = 26
                 })
                 
                 Create("TextLabel", Frame, {
-                    Position = UDim2.new(0, 50, 0, 15),
+                    Position = UDim2.new(0, 50, 0, 20),
                     Size = UDim2.new(0.5, 0, 0, 16),
                     Text = Title,
                     TextColor3 = Theme["Color Text"],
@@ -934,8 +809,8 @@ function bearlib:MakeWindow(Configs)
                 })
                 
                 Create("TextLabel", Frame, {
-                    Position = UDim2.new(0, 50, 0, 32),
-                    Size = UDim2.new(0.5, 0, 0, 24),
+                    Position = UDim2.new(0, 50, 0, 38),
+                    Size = UDim2.new(0.5, 0, 0, 20),
                     Text = Desc,
                     TextColor3 = Theme["Color Dark Text"],
                     TextSize = 9,
@@ -968,10 +843,11 @@ function bearlib:MakeWindow(Configs)
         end
         
         -- Profile
-        function Tab:AddProfile(Configs)
-            local Name = Configs.Name or "User"
-            local Bio = Configs.Bio or ""
-            local Avatar = Configs.Avatar or "rbxassetid://134852113716171"
+        function Tab:AddProfile(config)
+            local Name = config.Name or "User"
+            local Bio = config.Bio or ""
+            local Avatar = config.Avatar or "rbxassetid://134852113716171"
+            local Verified = config.Verified or false
             
             local Frame = Create("Frame", Container, {
                 Size = UDim2.new(1, 0, 0, 70),
@@ -1014,7 +890,7 @@ function bearlib:MakeWindow(Configs)
                 ZIndex = 26
             })
             
-            if Configs.Verified then
+            if Verified then
                 Create("ImageLabel", Frame, {
                     Size = UDim2.new(0, 14, 0, 14),
                     Position = UDim2.new(0, 65 + (string.len(Name) * 6), 0, 21),
@@ -1029,7 +905,7 @@ function bearlib:MakeWindow(Configs)
         return Tab
     end
     
-    -- Toggle button để mở/đóng GUI
+    -- Toggle button
     local ToggleGui = Instance.new("ScreenGui")
     ToggleGui.Name = "BearHub_Toggle"
     ToggleGui.Parent = CoreGui
@@ -1071,8 +947,8 @@ if not ToastContainer then
     ToastListLayout.Parent = ToastContainer
 end
 
-function bearlib:ShowToast(text, duration)
-    duration = duration or 5
+function bearlib:Notify(text, duration)
+    duration = duration or 3
     
     local ToastFrame = Instance.new("Frame")
     ToastFrame.Size = UDim2.new(0, 280, 0, 0)
@@ -1149,5 +1025,9 @@ function bearlib:ShowToast(text, duration)
     connection = RunService.Heartbeat:Connect(Update)
 end
 
-print("[BEARLIB] Loaded successfully - Compatible with Abacaxi Hub")
+function bearlib:ShowToast(text, duration)
+    self:Notify(text, duration)
+end
+
+print("[BEARLIB] Loaded - Compatible with Abacaxi Hub")
 return bearlib
