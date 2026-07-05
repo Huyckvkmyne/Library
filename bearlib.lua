@@ -1224,12 +1224,15 @@ function bearlib:MakeWindow(Configs)
         Name = "InfoButton"
     })
     InfoButton.Activated:Connect(function()
-    -- Tạo khung thông tin ở giữa màn hình
+    -- Kiểm tra nếu đã có InfoFrame thì không tạo mới
+    if MainFrame:FindFirstChild("InfoFrame") then return end
+    
+    -- Tạo khung thông tin ở giữa MainFrame
     local InfoFrame = Instance.new("Frame")
     InfoFrame.Name = "InfoFrame"
-    InfoFrame.Size = UDim2.new(0, 320, 0, 220)
-    InfoFrame.Position = UDim2.new(0.5, -160, 0.5, -110)  -- Giữa màn hình
-    InfoFrame.AnchorPoint = Vector2.new(0.5, 0.5)  -- Neo vào giữa
+    InfoFrame.Size = UDim2.new(0, 0, 0, 0)  -- Bắt đầu từ 0 cho animation
+    InfoFrame.Position = UDim2.new(0.5, 0, 0.5, 0)  -- Giữa MainFrame
+    InfoFrame.AnchorPoint = Vector2.new(0.5, 0.5)
     InfoFrame.BackgroundColor3 = Theme["Color Hub 2"]
     InfoFrame.BackgroundTransparency = 0
     InfoFrame.Parent = MainFrame
@@ -1254,6 +1257,15 @@ function bearlib:MakeWindow(Configs)
     Gradient.Color = ColorSequence.new(Theme["Color Hub 1"])
     Gradient.Rotation = 45
     Gradient.Parent = InfoFrame
+    
+    -- Lớp phủ tối bên ngoài (giống dialog)
+    local Overlay = Instance.new("Frame")
+    Overlay.Name = "Overlay"
+    Overlay.Size = UDim2.new(1, 0, 1, 0)
+    Overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    Overlay.BackgroundTransparency = 0.5
+    Overlay.ZIndex = 199
+    Overlay.Parent = InfoFrame
     
     -- Tiêu đề
     local TitleLabel = Instance.new("TextLabel")
@@ -1317,64 +1329,29 @@ function bearlib:MakeWindow(Configs)
     DescLabel.ZIndex = 201
     DescLabel.Parent = InfoFrame
     
-    -- Nút đóng
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Size = UDim2.new(0, 90, 0, 34)
-    CloseBtn.Position = UDim2.new(0.5, -45, 1, -12)
-    CloseBtn.AnchorPoint = Vector2.new(0.5, 1)
-    CloseBtn.BackgroundColor3 = Theme["Color Hub 1"]
-    CloseBtn.BackgroundTransparency = 0
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.TextColor3 = Theme["Color Text"]
-    CloseBtn.TextSize = 13
-    CloseBtn.Text = "✕ Close"
+    -- Nút đóng (giống nút X)
+    local CloseBtn = Instance.new("ImageButton")
+    CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+    CloseBtn.Position = UDim2.new(1, -12, 0, 12)
+    CloseBtn.AnchorPoint = Vector2.new(1, 0)
+    CloseBtn.BackgroundTransparency = 1
+    CloseBtn.Image = "rbxassetid://10747384394"  -- Icon X giống nút close
+    CloseBtn.ImageColor3 = Theme["Color Text"]
     CloseBtn.AutoButtonColor = false
     CloseBtn.ZIndex = 201
     CloseBtn.Parent = InfoFrame
     
-    local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 8)
-    CloseCorner.Parent = CloseBtn
-    
-    CloseBtn.MouseEnter:Connect(function()
-        CloseBtn.BackgroundTransparency = 0.4
-        CloseBtn.TextColor3 = Theme["Color Theme"]
-    end)
-    CloseBtn.MouseLeave:Connect(function()
-        CloseBtn.BackgroundTransparency = 0
-        CloseBtn.TextColor3 = Theme["Color Text"]
-    end)
-    
     CloseBtn.Activated:Connect(function()
+        -- Animation đóng
+        CreateTween({InfoFrame, "Size", UDim2.new(0, 0, 0, 0), 0.2, true})
+        CreateTween({InfoFrame, "BackgroundTransparency", 1, 0.15})
+        task.wait(0.25)
         InfoFrame:Destroy()
     end)
     
-    -- Click ra ngoài để đóng
-    local connection
-    connection = UserInputService.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local mousePos = input.Position
-            local framePos = InfoFrame.AbsolutePosition
-            local frameSize = InfoFrame.AbsoluteSize
-            
-            local isInside = mousePos.X >= framePos.X and 
-                            mousePos.X <= framePos.X + frameSize.X and
-                            mousePos.Y >= framePos.Y and
-                            mousePos.Y <= framePos.Y + frameSize.Y
-            
-            if not isInside then
-                InfoFrame:Destroy()
-                if connection then
-                    connection:Disconnect()
-                end
-            end
-        end
-    end)
-    
-    -- Animation xuất hiện từ giữa
-    InfoFrame.Size = UDim2.new(0, 0, 0, 0)
-    InfoFrame.BackgroundTransparency = 1
-    CreateTween({InfoFrame, "Size", UDim2.new(0, 320, 0, 220), 0.35, true})
+    -- Animation mở
+    task.wait(0.05)
+    CreateTween({InfoFrame, "Size", UDim2.new(0, 320, 0, 230), 0.35, true})
     CreateTween({InfoFrame, "BackgroundTransparency", 0, 0.25})
 end)
     
