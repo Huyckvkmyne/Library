@@ -1241,21 +1241,13 @@ function bearlib:MakeWindow(Configs)
     -- Tạo frame chính giống dialog
     local InfoFrame = Create("Frame", Screen, {
         Active = true,
-        Size = UDim2.fromOffset(0, 0),  -- Bắt đầu từ 0 cho animation
+        Size = UDim2.fromOffset(320, 210),
         Position = UDim2.fromScale(0.5, 0.5),
         AnchorPoint = Vector2.new(0.5, 0.5),
         ZIndex = 200
     })
     Make("Gradient", InfoFrame, 270)
     Make("Corner", InfoFrame, UDim.new(0, 12))
-    
-    -- Thêm viền cho InfoFrame
-    local InfoStroke = Instance.new("UIStroke")
-    InfoStroke.Color = Theme["UI Border Color"]
-    InfoStroke.Thickness = Theme["Border Thickness"]
-    InfoStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    InfoStroke.LineJoinMode = Enum.LineJoinMode.Round
-    InfoStroke.Parent = InfoFrame
     
     -- Tiêu đề
     InsertTheme(Create("TextLabel", InfoFrame, {
@@ -1270,7 +1262,7 @@ function bearlib:MakeWindow(Configs)
         ZIndex = 201
     }), "Text")
     
-    -- Nút đóng X giống dialog
+    -- Nút đóng X
     local CloseBtn = Create("ImageButton", InfoFrame, {
         Size = UDim2.new(0, 16, 0, 16),
         Position = UDim2.new(1, -12, 0, 12),
@@ -1348,7 +1340,7 @@ function bearlib:MakeWindow(Configs)
         })
     })
     
-    -- Nút OK giống dialog
+    -- Nút OK
     local OkButton = Make("Button", ButtonsHolder, {
         Text = "OK",
         Font = Enum.Font.GothamBold,
@@ -1359,16 +1351,8 @@ function bearlib:MakeWindow(Configs)
     })
     Make("Corner", OkButton, UDim.new(0, 8))
     
-    -- Animation mở
-    CreateTween({InfoFrame, "Size", UDim2.fromOffset(320, 210), 0.2, true})
-    CreateTween({InfoFrame, "Transparency", 0, 0.15})
-    CreateTween({Screen, "Transparency", 0.3, 0.15})
-    
     -- Hàm đóng
     local function CloseInfo()
-        CreateTween({InfoFrame, "Size", UDim2.fromOffset(0, 0), 0.2})
-        CreateTween({Screen, "Transparency", 1, 0.15})
-        CreateTween({InfoFrame, "Transparency", 1, 0.15, true})
         Screen:Destroy()
     end
     
@@ -1379,7 +1363,6 @@ function bearlib:MakeWindow(Configs)
     -- Click ra ngoài để đóng
     Screen.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            -- Kiểm tra xem có click vào InfoFrame không
             local mousePos = input.Position
             local framePos = InfoFrame.AbsolutePosition
             local frameSize = InfoFrame.AbsoluteSize
