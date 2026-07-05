@@ -1227,132 +1227,173 @@ function bearlib:MakeWindow(Configs)
     -- Kiểm tra nếu đã có InfoFrame thì không tạo mới
     if MainFrame:FindFirstChild("InfoFrame") then return end
     
-    -- Tạo khung thông tin ở giữa MainFrame
-    local InfoFrame = Instance.new("Frame")
-    InfoFrame.Name = "InfoFrame"
-    InfoFrame.Size = UDim2.new(0, 0, 0, 0)  -- Bắt đầu từ 0 cho animation
-    InfoFrame.Position = UDim2.new(0.5, 0, 0.5, 0)  -- Giữa MainFrame
-    InfoFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    InfoFrame.BackgroundColor3 = Theme["Color Hub 2"]
-    InfoFrame.BackgroundTransparency = 0
-    InfoFrame.Parent = MainFrame
-    InfoFrame.ZIndex = 200
-    InfoFrame.ClipsDescendants = true
+    -- Tạo overlay giống dialog
+    local Screen = InsertTheme(Create("Frame", MainFrame, {
+        BackgroundTransparency = 0.6,
+        Active = true,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Theme["Color Stroke"],
+        Name = "InfoFrame",
+        ZIndex = 150
+    }), "Stroke")
+    ApplyRoundedCorners(Screen, UDim.new(0, 12))
     
-    -- Bo góc
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, Theme["Corner Radius"] or 12)
-    Corner.Parent = InfoFrame
+    -- Tạo frame chính giống dialog
+    local InfoFrame = Create("Frame", Screen, {
+        Active = true,
+        Size = UDim2.fromOffset(0, 0),  -- Bắt đầu từ 0 cho animation
+        Position = UDim2.fromScale(0.5, 0.5),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        ZIndex = 200
+    })
+    Make("Gradient", InfoFrame, 270)
+    Make("Corner", InfoFrame, UDim.new(0, 12))
     
-    -- Viền
-    local Stroke = Instance.new("UIStroke")
-    Stroke.Color = Theme["UI Border Color"]
-    Stroke.Thickness = Theme["Border Thickness"]
-    Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    Stroke.LineJoinMode = Enum.LineJoinMode.Round
-    Stroke.Parent = InfoFrame
-    
-    -- Gradient nền
-    local Gradient = Instance.new("UIGradient")
-    Gradient.Color = ColorSequence.new(Theme["Color Hub 1"])
-    Gradient.Rotation = 45
-    Gradient.Parent = InfoFrame
-    
-    -- Lớp phủ tối bên ngoài (giống dialog)
-    local Overlay = Instance.new("Frame")
-    Overlay.Name = "Overlay"
-    Overlay.Size = UDim2.new(1, 0, 1, 0)
-    Overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    Overlay.BackgroundTransparency = 0.5
-    Overlay.ZIndex = 199
-    Overlay.Parent = InfoFrame
+    -- Thêm viền cho InfoFrame
+    local InfoStroke = Instance.new("UIStroke")
+    InfoStroke.Color = Theme["UI Border Color"]
+    InfoStroke.Thickness = Theme["Border Thickness"]
+    InfoStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    InfoStroke.LineJoinMode = Enum.LineJoinMode.Round
+    InfoStroke.Parent = InfoFrame
     
     -- Tiêu đề
-    local TitleLabel = Instance.new("TextLabel")
-    TitleLabel.Size = UDim2.new(1, -20, 0, 32)
-    TitleLabel.Position = UDim2.new(0, 10, 0, 12)
-    TitleLabel.BackgroundTransparency = 1
-    TitleLabel.Font = Enum.Font.GothamBold
-    TitleLabel.TextColor3 = Theme["Color Text"]
-    TitleLabel.TextSize = 20
-    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    TitleLabel.Text = "📘 Bear Library"
-    TitleLabel.ZIndex = 201
-    TitleLabel.Parent = InfoFrame
+    InsertTheme(Create("TextLabel", InfoFrame, {
+        Font = Enum.Font.GothamBold,
+        Size = UDim2.new(1, 0, 0, 25),
+        Text = "📘 Bear Library",
+        TextXAlignment = "Left",
+        TextColor3 = Theme["Color Text"],
+        TextSize = 18,
+        Position = UDim2.fromOffset(15, 8),
+        BackgroundTransparency = 1,
+        ZIndex = 201
+    }), "Text")
+    
+    -- Nút đóng X giống dialog
+    local CloseBtn = Create("ImageButton", InfoFrame, {
+        Size = UDim2.new(0, 16, 0, 16),
+        Position = UDim2.new(1, -12, 0, 12),
+        AnchorPoint = Vector2.new(1, 0),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://10747384394",
+        ImageColor3 = Theme["Color Text"],
+        AutoButtonColor = false,
+        ZIndex = 201
+    })
     
     -- Phiên bản
-    local VersionLabel = Instance.new("TextLabel")
-    VersionLabel.Size = UDim2.new(1, -20, 0, 22)
-    VersionLabel.Position = UDim2.new(0, 10, 0, 46)
-    VersionLabel.BackgroundTransparency = 1
-    VersionLabel.Font = Enum.Font.Gotham
-    VersionLabel.TextColor3 = Theme["Color Dark Text"]
-    VersionLabel.TextSize = 13
-    VersionLabel.TextXAlignment = Enum.TextXAlignment.Left
-    VersionLabel.Text = "⚡ Version: " .. (bearlib.Info.Version or "0.1.1")
-    VersionLabel.ZIndex = 201
-    VersionLabel.Parent = InfoFrame
+    InsertTheme(Create("TextLabel", InfoFrame, {
+        Font = Enum.Font.GothamMedium,
+        Size = UDim2.new(1, -25, 0, 20),
+        Text = "⚡ Version: " .. (bearlib.Info.Version or "0.1.1"),
+        TextXAlignment = "Left",
+        TextColor3 = Theme["Color Dark Text"],
+        TextSize = 13,
+        Position = UDim2.fromOffset(15, 38),
+        BackgroundTransparency = 1,
+        ZIndex = 201
+    }), "DarkText")
     
     -- Tác giả
-    local AuthorLabel = Instance.new("TextLabel")
-    AuthorLabel.Size = UDim2.new(1, -20, 0, 22)
-    AuthorLabel.Position = UDim2.new(0, 10, 0, 70)
-    AuthorLabel.BackgroundTransparency = 1
-    AuthorLabel.Font = Enum.Font.Gotham
-    AuthorLabel.TextColor3 = Theme["Color Dark Text"]
-    AuthorLabel.TextSize = 13
-    AuthorLabel.TextXAlignment = Enum.TextXAlignment.Left
-    AuthorLabel.Text = "👤 Made by: " .. (bearlib.Info.By or "Quang Huy")
-    AuthorLabel.ZIndex = 201
-    AuthorLabel.Parent = InfoFrame
+    InsertTheme(Create("TextLabel", InfoFrame, {
+        Font = Enum.Font.GothamMedium,
+        Size = UDim2.new(1, -25, 0, 20),
+        Text = "👤 Made by: " .. (bearlib.Info.By or "Quang Huy"),
+        TextXAlignment = "Left",
+        TextColor3 = Theme["Color Dark Text"],
+        TextSize = 13,
+        Position = UDim2.fromOffset(15, 60),
+        BackgroundTransparency = 1,
+        ZIndex = 201
+    }), "DarkText")
     
-    -- Đường kẻ
-    local Divider = Instance.new("Frame")
-    Divider.Size = UDim2.new(0.9, 0, 0, 1)
-    Divider.Position = UDim2.new(0.05, 0, 0, 98)
-    Divider.BackgroundColor3 = Theme["Color Stroke"]
-    Divider.BackgroundTransparency = 0.5
-    Divider.ZIndex = 201
-    Divider.Parent = InfoFrame
+    -- Đường kẻ ngang
+    local Divider = Create("Frame", InfoFrame, {
+        Size = UDim2.new(0.9, 0, 0, 1),
+        Position = UDim2.new(0.05, 0, 0, 85),
+        BackgroundColor3 = Theme["Color Stroke"],
+        BackgroundTransparency = 0.5,
+        ZIndex = 201
+    })
     
     -- Mô tả
-    local DescLabel = Instance.new("TextLabel")
-    DescLabel.Size = UDim2.new(0.9, 0, 0, 44)
-    DescLabel.Position = UDim2.new(0.05, 0, 0, 104)
-    DescLabel.BackgroundTransparency = 1
-    DescLabel.Font = Enum.Font.Gotham
-    DescLabel.TextColor3 = Theme["Color Dark Text"]
-    DescLabel.TextSize = 12
-    DescLabel.TextXAlignment = Enum.TextXAlignment.Left
-    DescLabel.TextWrapped = true
-    DescLabel.Text = "A modern UI library for Roblox scripts. Easy to use with beautiful design."
-    DescLabel.ZIndex = 201
-    DescLabel.Parent = InfoFrame
+    InsertTheme(Create("TextLabel", InfoFrame, {
+        Font = Enum.Font.Gotham,
+        Size = UDim2.new(0.9, -15, 0, 45),
+        Position = UDim2.new(0.05, 0, 0, 92),
+        Text = "A modern UI library for Roblox scripts. Easy to use with beautiful design.",
+        TextXAlignment = "Left",
+        TextColor3 = Theme["Color Dark Text"],
+        TextSize = 12,
+        BackgroundTransparency = 1,
+        TextWrapped = true,
+        ZIndex = 201
+    }), "DarkText")
     
-    -- Nút đóng (giống nút X)
-    local CloseBtn = Instance.new("ImageButton")
-    CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-    CloseBtn.Position = UDim2.new(1, -12, 0, 12)
-    CloseBtn.AnchorPoint = Vector2.new(1, 0)
-    CloseBtn.BackgroundTransparency = 1
-    CloseBtn.Image = "rbxassetid://10747384394"  -- Icon X giống nút close
-    CloseBtn.ImageColor3 = Theme["Color Text"]
-    CloseBtn.AutoButtonColor = false
-    CloseBtn.ZIndex = 201
-    CloseBtn.Parent = InfoFrame
+    -- Button container giống dialog
+    local ButtonsHolder = Create("Frame", InfoFrame, {
+        Size = UDim2.fromScale(1, 0.25),
+        Position = UDim2.fromScale(0, 1),
+        AnchorPoint = Vector2.new(0, 1),
+        BackgroundColor3 = Theme["Color Hub 2"],
+        BackgroundTransparency = 1,
+        ZIndex = 201
+    }, {
+        Create("UIListLayout", {
+            Padding = UDim.new(0, 10),
+            VerticalAlignment = "Center",
+            FillDirection = "Horizontal",
+            HorizontalAlignment = "Center"
+        })
+    })
     
-    CloseBtn.Activated:Connect(function()
-        -- Animation đóng
-        CreateTween({InfoFrame, "Size", UDim2.new(0, 0, 0, 0), 0.2, true})
-        CreateTween({InfoFrame, "BackgroundTransparency", 1, 0.15})
-        task.wait(0.25)
-        InfoFrame:Destroy()
-    end)
+    -- Nút OK giống dialog
+    local OkButton = Make("Button", ButtonsHolder, {
+        Text = "OK",
+        Font = Enum.Font.GothamBold,
+        TextColor3 = Theme["Color Text"],
+        TextSize = 12,
+        Size = UDim2.new(0.6, 0, 0, 32),
+        ZIndex = 202
+    })
+    Make("Corner", OkButton, UDim.new(0, 8))
     
     -- Animation mở
-    task.wait(0.05)
-    CreateTween({InfoFrame, "Size", UDim2.new(0, 320, 0, 230), 0.35, true})
-    CreateTween({InfoFrame, "BackgroundTransparency", 0, 0.25})
+    CreateTween({InfoFrame, "Size", UDim2.fromOffset(320, 210), 0.2, true})
+    CreateTween({InfoFrame, "Transparency", 0, 0.15})
+    CreateTween({Screen, "Transparency", 0.3, 0.15})
+    
+    -- Hàm đóng
+    local function CloseInfo()
+        CreateTween({InfoFrame, "Size", UDim2.fromOffset(0, 0), 0.2})
+        CreateTween({Screen, "Transparency", 1, 0.15})
+        CreateTween({InfoFrame, "Transparency", 1, 0.15, true})
+        Screen:Destroy()
+    end
+    
+    -- Sự kiện đóng
+    CloseBtn.Activated:Connect(CloseInfo)
+    OkButton.Activated:Connect(CloseInfo)
+    
+    -- Click ra ngoài để đóng
+    Screen.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            -- Kiểm tra xem có click vào InfoFrame không
+            local mousePos = input.Position
+            local framePos = InfoFrame.AbsolutePosition
+            local frameSize = InfoFrame.AbsoluteSize
+            
+            local isInside = mousePos.X >= framePos.X and 
+                            mousePos.X <= framePos.X + frameSize.X and
+                            mousePos.Y >= framePos.Y and
+                            mousePos.Y <= framePos.Y + frameSize.Y
+            
+            if not isInside then
+                CloseInfo()
+            end
+        end
+    end)
 end)
     
     SetChildren(ButtonsFolder, {
