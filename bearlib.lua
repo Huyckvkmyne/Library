@@ -1224,21 +1224,24 @@ function bearlib:MakeWindow(Configs)
         Name = "InfoButton"
     })
     InfoButton.Activated:Connect(function()
+    -- Tạo khung thông tin ở giữa màn hình
     local InfoFrame = Instance.new("Frame")
     InfoFrame.Name = "InfoFrame"
-    InfoFrame.Size = UDim2.new(0, 300, 0, 200)
-    InfoFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-    InfoFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    InfoFrame.Size = UDim2.new(0, 320, 0, 220)
+    InfoFrame.Position = UDim2.new(0.5, -160, 0.5, -110)  -- Giữa màn hình
+    InfoFrame.AnchorPoint = Vector2.new(0.5, 0.5)  -- Neo vào giữa
     InfoFrame.BackgroundColor3 = Theme["Color Hub 2"]
     InfoFrame.BackgroundTransparency = 0
     InfoFrame.Parent = MainFrame
     InfoFrame.ZIndex = 200
     InfoFrame.ClipsDescendants = true
     
+    -- Bo góc
     local Corner = Instance.new("UICorner")
     Corner.CornerRadius = UDim.new(0, Theme["Corner Radius"] or 12)
     Corner.Parent = InfoFrame
     
+    -- Viền
     local Stroke = Instance.new("UIStroke")
     Stroke.Color = Theme["UI Border Color"]
     Stroke.Thickness = Theme["Border Thickness"]
@@ -1246,104 +1249,107 @@ function bearlib:MakeWindow(Configs)
     Stroke.LineJoinMode = Enum.LineJoinMode.Round
     Stroke.Parent = InfoFrame
     
+    -- Gradient nền
     local Gradient = Instance.new("UIGradient")
     Gradient.Color = ColorSequence.new(Theme["Color Hub 1"])
     Gradient.Rotation = 45
     Gradient.Parent = InfoFrame
     
-    -- Title
+    -- Tiêu đề
     local TitleLabel = Instance.new("TextLabel")
-    TitleLabel.Size = UDim2.new(1, -20, 0, 30)
-    TitleLabel.Position = UDim2.new(0, 10, 0, 10)
+    TitleLabel.Size = UDim2.new(1, -20, 0, 32)
+    TitleLabel.Position = UDim2.new(0, 10, 0, 12)
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.Font = Enum.Font.GothamBold
     TitleLabel.TextColor3 = Theme["Color Text"]
-    TitleLabel.TextSize = 18
+    TitleLabel.TextSize = 20
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
     TitleLabel.Text = "📘 Bear Library"
     TitleLabel.ZIndex = 201
     TitleLabel.Parent = InfoFrame
     
-    -- Version
+    -- Phiên bản
     local VersionLabel = Instance.new("TextLabel")
-    VersionLabel.Size = UDim2.new(1, -20, 0, 20)
-    VersionLabel.Position = UDim2.new(0, 10, 0, 42)
+    VersionLabel.Size = UDim2.new(1, -20, 0, 22)
+    VersionLabel.Position = UDim2.new(0, 10, 0, 46)
     VersionLabel.BackgroundTransparency = 1
     VersionLabel.Font = Enum.Font.Gotham
     VersionLabel.TextColor3 = Theme["Color Dark Text"]
-    VersionLabel.TextSize = 12
+    VersionLabel.TextSize = 13
     VersionLabel.TextXAlignment = Enum.TextXAlignment.Left
-    VersionLabel.Text = "Version: " .. (bearlib.Info.Version or "0.1.1")
+    VersionLabel.Text = "⚡ Version: " .. (bearlib.Info.Version or "0.1.1")
     VersionLabel.ZIndex = 201
     VersionLabel.Parent = InfoFrame
     
-    -- Author
+    -- Tác giả
     local AuthorLabel = Instance.new("TextLabel")
-    AuthorLabel.Size = UDim2.new(1, -20, 0, 20)
-    AuthorLabel.Position = UDim2.new(0, 10, 0, 65)
+    AuthorLabel.Size = UDim2.new(1, -20, 0, 22)
+    AuthorLabel.Position = UDim2.new(0, 10, 0, 70)
     AuthorLabel.BackgroundTransparency = 1
     AuthorLabel.Font = Enum.Font.Gotham
     AuthorLabel.TextColor3 = Theme["Color Dark Text"]
-    AuthorLabel.TextSize = 12
+    AuthorLabel.TextSize = 13
     AuthorLabel.TextXAlignment = Enum.TextXAlignment.Left
-    AuthorLabel.Text = "Made by: " .. (bearlib.Info.By or "Quang Huy")
+    AuthorLabel.Text = "👤 Made by: " .. (bearlib.Info.By or "Quang Huy")
     AuthorLabel.ZIndex = 201
     AuthorLabel.Parent = InfoFrame
     
-    -- Divider
+    -- Đường kẻ
     local Divider = Instance.new("Frame")
     Divider.Size = UDim2.new(0.9, 0, 0, 1)
-    Divider.Position = UDim2.new(0.05, 0, 0, 90)
+    Divider.Position = UDim2.new(0.05, 0, 0, 98)
     Divider.BackgroundColor3 = Theme["Color Stroke"]
     Divider.BackgroundTransparency = 0.5
     Divider.ZIndex = 201
     Divider.Parent = InfoFrame
     
-    -- Description
+    -- Mô tả
     local DescLabel = Instance.new("TextLabel")
-    DescLabel.Size = UDim2.new(0.9, 0, 0, 40)
-    DescLabel.Position = UDim2.new(0.05, 0, 0, 95)
+    DescLabel.Size = UDim2.new(0.9, 0, 0, 44)
+    DescLabel.Position = UDim2.new(0.05, 0, 0, 104)
     DescLabel.BackgroundTransparency = 1
     DescLabel.Font = Enum.Font.Gotham
     DescLabel.TextColor3 = Theme["Color Dark Text"]
-    DescLabel.TextSize = 11
+    DescLabel.TextSize = 12
     DescLabel.TextXAlignment = Enum.TextXAlignment.Left
     DescLabel.TextWrapped = true
     DescLabel.Text = "A modern UI library for Roblox scripts. Easy to use with beautiful design."
     DescLabel.ZIndex = 201
     DescLabel.Parent = InfoFrame
     
-    -- Close button
+    -- Nút đóng
     local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Size = UDim2.new(0, 80, 0, 30)
-    CloseBtn.Position = UDim2.new(0.5, -40, 1, -10)
+    CloseBtn.Size = UDim2.new(0, 90, 0, 34)
+    CloseBtn.Position = UDim2.new(0.5, -45, 1, -12)
     CloseBtn.AnchorPoint = Vector2.new(0.5, 1)
     CloseBtn.BackgroundColor3 = Theme["Color Hub 1"]
     CloseBtn.BackgroundTransparency = 0
     CloseBtn.Font = Enum.Font.GothamBold
     CloseBtn.TextColor3 = Theme["Color Text"]
-    CloseBtn.TextSize = 12
-    CloseBtn.Text = "Close"
+    CloseBtn.TextSize = 13
+    CloseBtn.Text = "✕ Close"
     CloseBtn.AutoButtonColor = false
     CloseBtn.ZIndex = 201
     CloseBtn.Parent = InfoFrame
     
     local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 6)
+    CloseCorner.CornerRadius = UDim.new(0, 8)
     CloseCorner.Parent = CloseBtn
     
     CloseBtn.MouseEnter:Connect(function()
-        CloseBtn.BackgroundTransparency = 0.3
+        CloseBtn.BackgroundTransparency = 0.4
+        CloseBtn.TextColor3 = Theme["Color Theme"]
     end)
     CloseBtn.MouseLeave:Connect(function()
         CloseBtn.BackgroundTransparency = 0
+        CloseBtn.TextColor3 = Theme["Color Text"]
     end)
     
     CloseBtn.Activated:Connect(function()
         InfoFrame:Destroy()
     end)
     
-    -- Click outside to close
+    -- Click ra ngoài để đóng
     local connection
     connection = UserInputService.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -1365,10 +1371,11 @@ function bearlib:MakeWindow(Configs)
         end
     end)
     
-    -- Animation
+    -- Animation xuất hiện từ giữa
     InfoFrame.Size = UDim2.new(0, 0, 0, 0)
-    CreateTween({InfoFrame, "Size", UDim2.new(0, 300, 0, 200), 0.3, true})
-    CreateTween({InfoFrame, "BackgroundTransparency", 0, 0.2})
+    InfoFrame.BackgroundTransparency = 1
+    CreateTween({InfoFrame, "Size", UDim2.new(0, 320, 0, 220), 0.35, true})
+    CreateTween({InfoFrame, "BackgroundTransparency", 0, 0.25})
 end)
     
     SetChildren(ButtonsFolder, {
